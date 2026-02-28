@@ -2,7 +2,7 @@ import { AuthConfig } from 'angular-oauth2-oidc';
 
 export const authConfig: AuthConfig = {
   issuer: 'http://localhost:30081/auth', // Update with your authorization server URL
-  redirectUri: window.location.origin,
+  redirectUri: globalThis.location.origin,
   clientId: 'client',
   responseType: 'code',
   scope: 'openid',
