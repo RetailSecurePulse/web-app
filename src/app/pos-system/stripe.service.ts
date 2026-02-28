@@ -8,7 +8,6 @@ export class StripeService {
   private _elements?: StripeElements;
 
   constructor(private configService: ConfigService) {
-    console.log('stripe public key', this.configService.environment.stripePublicKey);
     this.stripePromise = loadStripe(this.configService.environment.stripePublicKey);
   }
 

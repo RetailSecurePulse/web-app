@@ -12,10 +12,10 @@ interface ApiConfig {
 }
 
 interface EnvironmentConfig {
+  production: boolean;
   authEnabled: boolean;
   devModeUser: string;
   devModeRole: string;
-  defaultPassword: string;
   stripePublicKey: string;
 }
 
@@ -43,14 +43,15 @@ export class ConfigService {
       authConfig: { ...authConfig, ...(runtime?.authConfig || {}) },
       apiConfig: { ...apiConfig, ...(runtime?.apiConfig || {}) },
       environment: {
+        production: env.production,
         authEnabled: env.authEnabled,
         devModeUser: env.devModeUser,
         devModeRole: env.devModeRole,
-        defaultPassword: env.defaultPassword,
-        stripePublicKey: env.stripePublicKey,
-        ...(runtime?.environment || {})
+        stripePublicKey: runtime?.environment?.stripePublicKey || env.stripePublicKey
       }
     };
+
+    this.assertSecureProductionConfig();
   }
 
   get authConfig(): AuthConfig {
@@ -63,5 +64,26 @@ export class ConfigService {
 
   get environment(): EnvironmentConfig {
     return this.config.environment;
+  }
+
+  private assertSecureProductionConfig(): void {
+    if (!this.config.environment.production) {
+      return;
+    }
+
+    if (this.config.authConfig.requireHttps === false) {
+      throw new Error('Insecure production configuration: authConfig.requireHttps must not be false.');
+    }
+
+    const issuer = this.config.authConfig.issuer ?? '';
+    if (typeof issuer === 'string' && issuer.startsWith('http://')) {
+      throw new Error('Insecure production configuration: auth issuer must use HTTPS.');
+    }
+
+    for (const [name, value] of Object.entries(this.config.apiConfig)) {
+      if (value.startsWith('http://')) {
+        throw new Error(`Insecure production configuration: ${name} must use HTTPS or a relative URL.`);
+      }
+    }
   }
 }

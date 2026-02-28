@@ -29,9 +29,11 @@ describe('OAuthAuthenticationService', () => {
     configSpy = jasmine.createSpyObj('ConfigService', [], {
       authConfig: { dummy: true }, // shape not important for test
       environment: {
+        production: false,
         authEnabled: true,
         devModeRole: 'ADMIN',
         devModeUser: 'devuser',
+        stripePublicKey: 'pk_test_dummy',
       },
     });
 
@@ -48,10 +50,23 @@ describe('OAuthAuthenticationService', () => {
   });
 
   describe('initializeAuth', () => {
-    it('should resolve immediately if auth is disabled', async () => {
+    it('should resolve immediately if auth is disabled in non-production', async () => {
+      configSpy.environment.production = false;
       configSpy.environment.authEnabled = false;
       const result = await service.initializeAuth();
       expect(result).toBeUndefined();
+    });
+
+    it('should not bypass auth in production even if authEnabled is false', async () => {
+      configSpy.environment.production = true;
+      configSpy.environment.authEnabled = false;
+      mockOAuthService.loadDiscoveryDocumentAndTryLogin.and.returnValue(Promise.resolve(true));
+      mockOAuthService.hasValidAccessToken.and.returnValue(false);
+
+      await service.initializeAuth();
+
+      expect(mockOAuthService.loadDiscoveryDocumentAndTryLogin).toHaveBeenCalled();
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/login']);
     });
 
     it('should navigate to /login if no valid token', async () => {
@@ -64,28 +79,25 @@ describe('OAuthAuthenticationService', () => {
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/login']);
     });
 
-    it('should log token if valid token exists', async () => {
+    it('should not navigate if valid token exists', async () => {
       configSpy.environment.authEnabled = true;
       mockOAuthService.loadDiscoveryDocumentAndTryLogin.and.returnValue(Promise.resolve(true));
       mockOAuthService.hasValidAccessToken.and.returnValue(true);
-      mockOAuthService.getAccessToken.and.returnValue('real-token');
-
-      const logSpy = spyOn(console, 'log');
 
       await service.initializeAuth();
 
-      expect(logSpy).toHaveBeenCalledWith('Token: \r\n' + service.accessToken);
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
     });
 
     it('should handle error and navigate to /login', async () => {
       configSpy.environment.authEnabled = true;
       mockOAuthService.loadDiscoveryDocumentAndTryLogin.and.returnValue(Promise.reject('fail'));
 
-      const logSpy = spyOn(console, 'log');
+      const errorSpy = spyOn(console, 'error');
 
       await service.initializeAuth();
 
-      expect(logSpy).toHaveBeenCalledWith('Error during OAuth configuration', 'fail');
+      expect(errorSpy).toHaveBeenCalledWith('Error during OAuth configuration', 'fail');
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/login']);
     });
   });
@@ -101,12 +113,10 @@ describe('OAuthAuthenticationService', () => {
 
     it('should not call initCodeFlow if auth disabled', () => {
       configSpy.environment.authEnabled = false;
-      const logSpy = spyOn(console, 'log');
 
       service.login();
 
       expect(mockOAuthService.initCodeFlow).not.toHaveBeenCalled();
-      expect(logSpy).toHaveBeenCalledWith('Authentication is disabled');
     });
   });
 
@@ -122,23 +132,19 @@ describe('OAuthAuthenticationService', () => {
 
     it('should not call logOut if auth disabled', () => {
       configSpy.environment.authEnabled = false;
-      const logSpy = spyOn(console, 'log');
 
       service.logout();
 
       expect(mockOAuthService.logOut).not.toHaveBeenCalled();
       expect(mockRouter.navigate).not.toHaveBeenCalled();
-      expect(logSpy).toHaveBeenCalledWith('Authentication is disabled');
     });
   });
 
   describe('isAuthenticated', () => {
     it('should return true if auth disabled', () => {
       configSpy.environment.authEnabled = false;
-      const logSpy = spyOn(console, 'log');
 
       expect(service.isAuthenticated).toBeTrue();
-      expect(logSpy).toHaveBeenCalledWith('Authentication is disabled');
     });
 
     it('should return hasValidAccessToken if auth enabled', () => {
