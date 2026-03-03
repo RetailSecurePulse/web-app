@@ -24,7 +24,7 @@ export const apiConfig = {
 export const environment = {
   production: false,
   authEnabled: true,
-  useRuntimeConfig: false,
+  useRuntimeConfig: true,
   devModeUser: 'superadmin',
   devModeRole: 'ADMIN', //'OPERATOR', //
   defaultPassword: 'password1',
