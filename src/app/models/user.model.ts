@@ -32,5 +32,6 @@ export interface ChangePasswordDTO {
 export const UserRoles = [
   { label: 'Admin', value: 'ADMIN' },
   { label: 'Manager', value: 'MANAGER' },
+  { label: 'Inventory Manager', value: 'INVENTORY_MANAGER' },
   { label: 'Cashier', value: 'CASHIER' },
 ];

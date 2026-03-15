@@ -4,12 +4,14 @@ import { ManagerSidebarStrategy } from '../strategyMethod/manager-sidebar.strate
 import { CashierSidebarStrategy } from '../strategyMethod/cashier-sidebar.strategy';
 import { ISidebarStrategy } from '../strategyMethod/sidebar.strategy';
 import { AuthFacade } from '../../services/auth.facade';
+import {InventorymanagerSidebarStrategy} from '../strategyMethod/inventorymanager-sidebar.strategy';
 
 @Injectable({ providedIn: 'root' })
 export class SidebarFactory {
   constructor(
     private adminStrategy: AdminSidebarStrategy,
     private managerStrategy: ManagerSidebarStrategy,
+    private inventoryManagerStrategy: InventorymanagerSidebarStrategy,
     private cashierStrategy: CashierSidebarStrategy,
     private authService: AuthFacade
   ) {}
@@ -27,6 +29,10 @@ export class SidebarFactory {
 
     if (userRoles.includes('MANAGER')) {
       return this.managerStrategy;
+    }
+
+    if (userRoles.includes('INVENTORY_MANAGER')) {
+      return this.inventoryManagerStrategy;
     }
 
     if (userRoles.includes('CASHIER')) {
