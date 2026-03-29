@@ -1,11 +1,9 @@
-import { AuthFacade } from '../services/auth.facade';
-import { environment } from '../../environments/environment';
-
 import { TestBed } from '@angular/core/testing';
 import { HttpClient } from '@angular/common/http';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { AuthFacade } from '../services/auth.facade';
 
 describe('authInterceptor', () => {
   let httpClient: HttpClient;

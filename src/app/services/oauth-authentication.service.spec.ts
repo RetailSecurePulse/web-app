@@ -198,6 +198,14 @@ describe('OAuthAuthenticationService', () => {
 
       expect(service.getUsername()).toBe('UNAUTHORIZED');
     });
+
+    it('should return UNAUTHORIZED if token decode fails', () => {
+      configSpy.environment.authEnabled = true;
+      spyOnProperty(service, 'accessToken').and.returnValue('badtoken');
+      spyOn(console, 'error');
+
+      expect(service.getUsername()).toBe('UNAUTHORIZED');
+    });
   });
 
   describe('accessToken', () => {
@@ -225,6 +233,17 @@ describe('OAuthAuthenticationService', () => {
 
       expect(decoded.sub).toBe('devuser');
       expect(decoded.roles).toEqual(['ADMIN']);
+    });
+
+    it('should return an unauthorized token if token decode fails', () => {
+      configSpy.environment.authEnabled = true;
+      spyOnProperty(service, 'accessToken').and.returnValue('badtoken');
+      spyOn(console, 'error');
+
+      expect(service.getDecodedToken()).toEqual({
+        roles: ['UNAUTHORIZED'],
+        sub: 'UNAUTHORIZED'
+      });
     });
   });
 });

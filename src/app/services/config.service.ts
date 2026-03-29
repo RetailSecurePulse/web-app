@@ -34,6 +34,7 @@ export class ConfigService {
   constructor() {
     const useRuntime = env.useRuntimeConfig;
     const runtime = window.runtimeConfig;
+    const runtimeEnvironment = runtime?.environment;
 
     if (useRuntime && !runtime) {
       console.warn('Runtime config expected but not found. Falling back to environment.ts.');
@@ -44,10 +45,10 @@ export class ConfigService {
       apiConfig: { ...apiConfig, ...(runtime?.apiConfig || {}) },
       environment: {
         production: env.production,
-        authEnabled: env.authEnabled,
-        devModeUser: env.devModeUser,
-        devModeRole: env.devModeRole,
-        stripePublicKey: runtime?.environment?.stripePublicKey || env.stripePublicKey
+        authEnabled: runtimeEnvironment?.authEnabled ?? env.authEnabled,
+        devModeUser: runtimeEnvironment?.devModeUser ?? env.devModeUser,
+        devModeRole: runtimeEnvironment?.devModeRole ?? env.devModeRole,
+        stripePublicKey: runtimeEnvironment?.stripePublicKey ?? env.stripePublicKey
       }
     };
 
@@ -73,6 +74,10 @@ export class ConfigService {
 
     if (this.config.authConfig.requireHttps === false) {
       throw new Error('Insecure production configuration: authConfig.requireHttps must not be false.');
+    }
+
+    if (this.config.authConfig.showDebugInformation === true) {
+      throw new Error('Insecure production configuration: OAuth debug logging must be disabled.');
     }
 
     const issuer = this.config.authConfig.issuer ?? '';

@@ -16,6 +16,10 @@ export class OAuthAuthenticationService {
   private readonly router: Router = inject(Router);
   private readonly oauthService: OAuthService = inject(OAuthService);
   private readonly config: ConfigService = inject(ConfigService);
+  private readonly unauthorizedToken: DecodedToken = {
+    roles: ['UNAUTHORIZED'],
+    sub: 'UNAUTHORIZED'
+  };
 
   private get isDevAuthBypassEnabled(): boolean {
     return !this.config.environment.production && !this.config.environment.authEnabled;
@@ -68,28 +72,20 @@ export class OAuthAuthenticationService {
       return [this.config.environment.devModeRole.toUpperCase()];
     }
 
-    if (!this.accessToken) {
+    const decodedToken = this.decodeAccessToken();
+    if (!decodedToken) {
       return ['UNAUTHORIZED'];
     }
 
-    try {
-      const decodedToken = jwtDecode<DecodedToken>(this.accessToken);
-      return decodedToken.roles?.map(role => role.toUpperCase()) || ['UNAUTHORIZED'];
-    } catch (error) {
-      console.error('Error decoding token:', error);
-      return ['UNAUTHORIZED'];
-    }
+    return decodedToken.roles?.map(role => role.toUpperCase()) || ['UNAUTHORIZED'];
   }
 
   getUsername(): string {
     if (this.isDevAuthBypassEnabled) {
       return this.config.environment.devModeUser;
     }
-    if (!this.accessToken) {
-      return 'UNAUTHORIZED';
-    }
-    const decodedToken: DecodedToken = jwtDecode(this.accessToken);
-    return decodedToken.sub;
+
+    return this.decodeAccessToken()?.sub ?? 'UNAUTHORIZED';
   }
 
   get accessToken(): string {
@@ -106,6 +102,20 @@ export class OAuthAuthenticationService {
         sub: this.config.environment.devModeUser
       };
     }
-    return jwtDecode(this.accessToken);
+
+    return this.decodeAccessToken() ?? this.unauthorizedToken;
+  }
+
+  private decodeAccessToken(): DecodedToken | null {
+    if (!this.accessToken) {
+      return null;
+    }
+
+    try {
+      return jwtDecode<DecodedToken>(this.accessToken);
+    } catch (error) {
+      console.error('Error decoding token:', error);
+      return null;
+    }
   }
 }

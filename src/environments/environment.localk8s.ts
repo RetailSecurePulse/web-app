@@ -10,7 +10,7 @@ export const authConfig: AuthConfig = {
   useSilentRefresh: true,
   useHttpBasicAuth: false,
   disablePKCE: false,
-  showDebugInformation: true
+  showDebugInformation: false
 };
 
 export const apiConfig = {

@@ -1,15 +1,15 @@
 import { AuthConfig } from 'angular-oauth2-oidc';
 
 export const authConfig: AuthConfig = {
-  issuer: 'http://localhost:30081/auth', // Update with your authorization server URL
-  redirectUri: globalThis.location.origin,
+  issuer: 'http://localhost:8081/auth', // Update with your authorization server URL
+  redirectUri: `${globalThis.location.origin}/auth/callback`,
   clientId: 'client',
   responseType: 'code',
   scope: 'openid',
   useSilentRefresh: true,
   useHttpBasicAuth: false,
   disablePKCE: false,
-  showDebugInformation: true
+  showDebugInformation: false
 };
 
 export const apiConfig = {
