@@ -1,7 +1,7 @@
 {
   "authConfig": {
-    "issuer": "https://retailpulse.me:8081",
-    "requireHttps": true,
+    "issuer": "http://localhost:30081", 
+    "requireHttps": false,
     "redirectUri": "window.location.origin",
     "clientId": "client",
     "responseType": "code",
@@ -9,22 +9,23 @@
     "useSilentRefresh": true,
     "useHttpBasicAuth": false,
     "disablePKCE": false,
-    "showDebugInformation": false
+    "showDebugInformation": true
   },
   "apiConfig": {
-    "user_api_url": "https://retailpulse.me:8082/",
-    "business_entity_api_url": "https://retailpulse.me:8083/",
-    "inventory_api_url": "https://retailpulse.me:8084/",
-    "sales_api_url": "https://retailpulse.me:8085/",
-    "report_api_url": "https://retailpulse.me:8086/",
-    "payments_api_url": "https://retailpulse.me:8087/"
+    "user_api_url": "http://svc-rp-user:8082/",
+    "business_entity_api_url": "http://svc-rp-businessentity:8083/",
+    "inventory_api_url": "http://svc-rp-inventory:8084/",
+    "sales_api_url": "http://svc-rp-sales:8085/",
+    "report_api_url": "http://svc-rp-report:8086/",
+    "payment_api_url": "http://svc-rp-payment:8087/"
   },
   "environment": {
-    "production": true,
+    "production": false,
     "authEnabled": true,
     "useRuntimeConfig": true,
     "devModeUser": "superadmin",
     "devModeRole": "ADMIN",
+    "defaultPassword": "password1",
     "stripePublicKey": "pk_test_51Rwa9JCTUDg2faMiUxYG28Di0rDMjD4C5xEPCkn0nv6bPc1Qy8WvivfAhhykVxGlAqfeF2tvILpEd0K9je6WPhLo00bfZAazGS"
   }
 }
