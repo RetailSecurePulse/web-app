@@ -2,11 +2,14 @@
 # Kubernetes will be used in production
 services:
   rp-web-app:
-    image: rp-web-app:v0.1.0
+    image: ${DOCKER_IMAGE:-rp-web-app:v0.1.0}
     container_name: app-rp-web
     build:
       context: .
       dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+        - linux/arm64
     ports:
       - "8080:8080"    
     networks:
@@ -15,4 +18,3 @@ services:
 networks:
   retailpulse-network:
     driver: bridge
-

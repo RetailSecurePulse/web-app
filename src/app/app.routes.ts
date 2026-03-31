@@ -1,6 +1,7 @@
 import {Routes} from '@angular/router';
 import {LoginPageComponent} from './login-page/login-page.component';
 import {authGuard} from './guards/auth.guard';
+import { AuthCallbackComponent } from './auth-callback/auth-callback.component';
 
 // Lazy-loaded components
 const lazyAdminPage = () => import('./admin-page/admin-page.component').then(mod => mod.AdminPageComponent);
@@ -14,6 +15,7 @@ const lazyInvenotryManagement = () => import ('./inventory-management/inventory-
 const lazyPOS = () => import('./pos-system/pos-system.component').then(mod => mod.PosComponent);
 
 export const routes: Routes = [
+  {path: 'auth/callback', component: AuthCallbackComponent},
   // Login route
   {path: '', component: LoginPageComponent},
   {path: 'login', component: LoginPageComponent},
@@ -75,9 +77,6 @@ export const routes: Routes = [
       {path: '', redirectTo: 'profile', pathMatch: 'full' }, // Default childroute
     ],
   },
-
-  // Default route redirects to login
-  {path: '', redirectTo: '/login', pathMatch: 'full'},
   // Wildcard route redirects to login
   {path: '**', redirectTo: '/login'},
 ];

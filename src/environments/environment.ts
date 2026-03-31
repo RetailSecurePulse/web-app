@@ -1,15 +1,15 @@
 import { AuthConfig } from 'angular-oauth2-oidc';
 
 export const authConfig: AuthConfig = {
-  issuer: 'http://localhost:30081/auth', // Update with your authorization server URL
-  redirectUri: window.location.origin,
+  issuer: 'http://localhost:8081/auth', // Update with your authorization server URL
+  redirectUri: `${globalThis.location.origin}/auth/callback`,
   clientId: 'client',
   responseType: 'code',
   scope: 'openid',
   useSilentRefresh: true,
   useHttpBasicAuth: false,
   disablePKCE: false,
-  showDebugInformation: true
+  showDebugInformation: false
 };
 
 export const apiConfig = {
@@ -27,6 +27,5 @@ export const environment = {
   useRuntimeConfig: true,
   devModeUser: 'superadmin',
   devModeRole: 'ADMIN', //'OPERATOR', //
-  defaultPassword: 'password1',
   stripePublicKey: 'pk_test_51Rwa9JCTUDg2faMiUxYG28Di0rDMjD4C5xEPCkn0nv6bPc1Qy8WvivfAhhykVxGlAqfeF2tvILpEd0K9je6WPhLo00bfZAazGS'
 };
