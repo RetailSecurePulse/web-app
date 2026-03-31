@@ -2,8 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { UserService } from './user.service';
-import { User, UpdateUserDTO, ChangePasswordDTO } from '../models/user.model';
-import { apiConfig } from '../../environments/environment';
+import { User, CreateUserDTO, UpdateUserDTO, ChangePasswordDTO } from '../models/user.model';
+import { apiConfig, environment } from '../../environments/environment';
 
 describe('UserService', () => {
   let service: UserService;
@@ -86,18 +86,19 @@ describe('UserService', () => {
 
   describe('createUser', () => {
     it('should POST new user', () => {
+      const dto: CreateUserDTO = {
+        username: mockUser.username,
+        password: environment.defaultPassword,
+        email: mockUser.email,
+        name: mockUser.name,
+        roles: mockUser.roles
+      };
       service.createUser(mockUser).subscribe(user => {
         expect(user).toEqual(mockUser);
       });
       const req = httpMock.expectOne(apiUrl);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body.username).toBe(mockUser.username);
-      expect(req.request.body.email).toBe(mockUser.email);
-      expect(req.request.body.name).toBe(mockUser.name);
-      expect(req.request.body.roles).toEqual(mockUser.roles);
-      expect(req.request.body.password).toEqual(jasmine.any(String));
-      expect(req.request.body.password.length).toBeGreaterThanOrEqual(20);
-      expect(req.request.body.password).not.toBe('password1');
+      expect(req.request.body).toEqual(dto);
       req.flush(mockUser);
     });
 
