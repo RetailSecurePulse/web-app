@@ -25,6 +25,10 @@ interface RuntimeConfig {
   environment: EnvironmentConfig;
 }
 
+type RuntimeConfigHost = typeof globalThis & {
+  runtimeConfig?: RuntimeConfig;
+};
+
 @Injectable({
   providedIn: 'root'
 })
@@ -32,16 +36,11 @@ export class ConfigService {
   private readonly config: RuntimeConfig;
 
   constructor() {
-    const useRuntime = env.useRuntimeConfig;
-    const runtime = window.runtimeConfig;
+    const runtime = this.resolveRuntimeConfig();
     const runtimeEnvironment = runtime?.environment;
 
-    if (useRuntime && !runtime) {
-      console.warn('Runtime config expected but not found. Falling back to environment.ts.');
-    }
-
     this.config = {
-      authConfig: { ...authConfig, ...(runtime?.authConfig || {}) },
+      authConfig: this.normalizeAuthConfig({ ...authConfig, ...(runtime?.authConfig || {}) }),
       apiConfig: { ...apiConfig, ...(runtime?.apiConfig || {}) },
       environment: {
         production: env.production,
@@ -67,7 +66,37 @@ export class ConfigService {
     return this.config.environment;
   }
 
+  private resolveRuntimeConfig(): RuntimeConfig | undefined {
+    // Local dev builds should keep their static environment values. This avoids
+    // an accidental global runtimeConfig object silently overriding local auth
+    // and API endpoints during ng serve or unit tests.
+    if (!env.useRuntimeConfig) {
+      return undefined;
+    }
+
+    return (globalThis as RuntimeConfigHost).runtimeConfig;
+  }
+
+  private normalizeAuthConfig(config: AuthConfig): AuthConfig {
+    const normalizedConfig: AuthConfig = { ...config };
+    const origin = globalThis.location?.origin ?? '';
+    const redirectUri = normalizedConfig.redirectUri;
+
+    // Runtime config can only safely store placeholders for the SPA callback,
+    // because the real browser origin is only known at runtime in the browser.
+    if (redirectUri === 'window.location.origin' || redirectUri === 'globalThis.location.origin') {
+      normalizedConfig.redirectUri = `${origin}/auth/callback`;
+    } else if (redirectUri === '/auth/callback') {
+      normalizedConfig.redirectUri = `${origin}/auth/callback`;
+    }
+
+    return normalizedConfig;
+  }
+
   private assertSecureProductionConfig(): void {
+    // Production builds intentionally fail fast when auth or API endpoints are
+    // still configured like local development. That keeps insecure runtime
+    // overrides from being deployed quietly.
     if (!this.config.environment.production) {
       return;
     }

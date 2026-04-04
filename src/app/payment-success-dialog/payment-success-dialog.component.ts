@@ -47,23 +47,20 @@ export class PaymentSuccessDialogComponent {
   }
 
   printReceipt() {
-    // Create a minimal printable page and trigger browser print
     const html = this.renderReceiptHtml();
-    const w = window.open('', '_blank', 'noopener,noreferrer');
+    const blob = new Blob([html], { type: 'text/html' });
+    const receiptUrl = globalThis.URL.createObjectURL(blob);
+    const w = globalThis.open(receiptUrl, '_blank', 'noopener,noreferrer');
     if (!w) {
-      // popup blocked
+      globalThis.URL.revokeObjectURL(receiptUrl);
       alert('Popup blocked. Please allow popups to print the receipt.');
       return;
     }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    // give browser a small delay to render before printing
+
     setTimeout(() => {
       w.focus();
       w.print();
-      // optionally close after print (comment out if you want user control)
-      // w.close();
+      setTimeout(() => globalThis.URL.revokeObjectURL(receiptUrl), 1000);
     }, 250);
   }
 

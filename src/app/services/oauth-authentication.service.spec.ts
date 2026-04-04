@@ -93,11 +93,8 @@ describe('OAuthAuthenticationService', () => {
       configSpy.environment.authEnabled = true;
       mockOAuthService.loadDiscoveryDocumentAndTryLogin.and.returnValue(Promise.reject('fail'));
 
-      const errorSpy = spyOn(console, 'error');
-
       await service.initializeAuth();
 
-      expect(errorSpy).toHaveBeenCalledWith('Error during OAuth configuration', 'fail');
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/login']);
     });
   });
@@ -177,10 +174,7 @@ describe('OAuthAuthenticationService', () => {
       // jwt-decode will throw on a non-JWT string
       spyOnProperty(service, 'accessToken').and.returnValue('badtoken');
 
-      const errorSpy = spyOn(console, 'error');
-
       expect(service.getUserRole()).toEqual(['UNAUTHORIZED']);
-      expect(errorSpy).toHaveBeenCalled(); // logs from catch block
     });
   });
 
@@ -202,7 +196,6 @@ describe('OAuthAuthenticationService', () => {
     it('should return UNAUTHORIZED if token decode fails', () => {
       configSpy.environment.authEnabled = true;
       spyOnProperty(service, 'accessToken').and.returnValue('badtoken');
-      spyOn(console, 'error');
 
       expect(service.getUsername()).toBe('UNAUTHORIZED');
     });
@@ -238,7 +231,6 @@ describe('OAuthAuthenticationService', () => {
     it('should return an unauthorized token if token decode fails', () => {
       configSpy.environment.authEnabled = true;
       spyOnProperty(service, 'accessToken').and.returnValue('badtoken');
-      spyOn(console, 'error');
 
       expect(service.getDecodedToken()).toEqual({
         roles: ['UNAUTHORIZED'],

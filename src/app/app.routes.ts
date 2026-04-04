@@ -2,6 +2,7 @@ import {Routes} from '@angular/router';
 import {LoginPageComponent} from './login-page/login-page.component';
 import {authGuard} from './guards/auth.guard';
 import { AuthCallbackComponent } from './auth-callback/auth-callback.component';
+import { LandingPageComponent } from './landing-page/landing-page.component';
 
 // Lazy-loaded components
 const lazyAdminPage = () => import('./admin-page/admin-page.component').then(mod => mod.AdminPageComponent);
@@ -16,8 +17,8 @@ const lazyPOS = () => import('./pos-system/pos-system.component').then(mod => mo
 
 export const routes: Routes = [
   {path: 'auth/callback', component: AuthCallbackComponent},
-  // Login route
-  {path: '', component: LoginPageComponent},
+  // Public entry routes
+  {path: '', component: LandingPageComponent},
   {path: 'login', component: LoginPageComponent},
 
   // Admin routes with guard and role-based access

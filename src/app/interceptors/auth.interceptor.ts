@@ -1,24 +1,34 @@
 import {inject} from '@angular/core';
 import {HttpInterceptorFn} from '@angular/common/http';
 import { AuthFacade } from '../services/auth.facade';
+import { ConfigService } from '../services/config.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const patterns = [
+  const excludedPaths = [
     '/.well-known/openid-configuration',
     '/oauth2/jwks',
     '/oauth2/token',
-    '/login'
+    '/login',
+    '/api/auth/login/status',
+    '/api/auth/login/start',
+    '/api/auth/login/verify',
+    '/api/auth/login/resend'
   ];
 
   const authService = inject(AuthFacade);
+  const configService = inject(ConfigService);
   const token = authService.getAccessToken();
+  const protectedOrigins = Object.values(configService.apiConfig)
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+    .map(value => value.replace(/\/+$/, ''));
 
   if (req.method === 'OPTIONS') {
     return next(req);
   }
 
-  const matches = patterns.some(pattern => req.url.includes(pattern));
-  if (matches) {
+  const isExcludedPath = excludedPaths.some(pattern => req.url.includes(pattern));
+  const isProtectedApiRequest = protectedOrigins.some(prefix => req.url.startsWith(prefix));
+  if (isExcludedPath || !isProtectedApiRequest) {
     return next(req);
   }
 

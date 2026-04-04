@@ -2,7 +2,7 @@
   "authConfig": {
     "issuer": "https://retailpulse.me:8081",
     "requireHttps": true,
-    "redirectUri": "window.location.origin",
+    "redirectUri": "/auth/callback",
     "clientId": "client",
     "responseType": "code",
     "scope": "openid",

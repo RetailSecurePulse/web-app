@@ -39,8 +39,7 @@ export class OAuthAuthenticationService {
       if (!this.oauthService.hasValidAccessToken()) {
         this.router.navigate(['/login']);
       }
-    }).catch(error => {
-      console.error('Error during OAuth configuration', error);
+    }).catch(() => {
       this.router.navigate(['/login']);
     });
   }
@@ -113,8 +112,7 @@ export class OAuthAuthenticationService {
 
     try {
       return jwtDecode<DecodedToken>(this.accessToken);
-    } catch (error) {
-      console.error('Error decoding token:', error);
+    } catch {
       return null;
     }
   }

@@ -1,24 +1,33 @@
 import { ConfigService } from './config.service';
 import { environment } from '../../environments/environment';
 
+type RuntimeConfigHost = typeof globalThis & {
+  runtimeConfig?: any;
+};
+
 describe('ConfigService', () => {
-  let originalRuntimeConfig: Window['runtimeConfig'];
+  let originalRuntimeConfig: RuntimeConfigHost['runtimeConfig'];
+  let originalUseRuntimeConfig: boolean;
 
   beforeEach(() => {
-    originalRuntimeConfig = window.runtimeConfig;
+    originalRuntimeConfig = (globalThis as RuntimeConfigHost).runtimeConfig;
+    originalUseRuntimeConfig = environment.useRuntimeConfig;
   });
 
   afterEach(() => {
+    (environment as { useRuntimeConfig: boolean }).useRuntimeConfig = originalUseRuntimeConfig;
+
     if (originalRuntimeConfig === undefined) {
-      delete window.runtimeConfig;
+      delete (globalThis as RuntimeConfigHost).runtimeConfig;
       return;
     }
 
-    window.runtimeConfig = originalRuntimeConfig;
+    (globalThis as RuntimeConfigHost).runtimeConfig = originalRuntimeConfig;
   });
 
   it('should apply runtime environment overrides for local auth bypass settings', () => {
-    window.runtimeConfig = {
+    (environment as { useRuntimeConfig: boolean }).useRuntimeConfig = true;
+    (globalThis as RuntimeConfigHost).runtimeConfig = {
       authConfig: {} as any,
       apiConfig: {} as any,
       environment: {
@@ -40,7 +49,8 @@ describe('ConfigService', () => {
   });
 
   it('should fall back to environment values when runtime environment overrides are absent', () => {
-    window.runtimeConfig = {
+    (environment as { useRuntimeConfig: boolean }).useRuntimeConfig = true;
+    (globalThis as RuntimeConfigHost).runtimeConfig = {
       authConfig: {} as any,
       apiConfig: {} as any,
       environment: undefined as any
@@ -58,7 +68,8 @@ describe('ConfigService', () => {
   });
 
   it('should reject production runtime config that enables OAuth debug logging', () => {
-    window.runtimeConfig = {
+    (environment as { useRuntimeConfig: boolean }).useRuntimeConfig = true;
+    (globalThis as RuntimeConfigHost).runtimeConfig = {
       authConfig: {
         showDebugInformation: true
       } as any,
@@ -83,5 +94,42 @@ describe('ConfigService', () => {
     } finally {
       (environment as { production: boolean }).production = originalProduction;
     }
+  });
+
+  it('should normalize runtime redirectUri placeholders to the current origin callback route', () => {
+    (environment as { useRuntimeConfig: boolean }).useRuntimeConfig = true;
+    (globalThis as RuntimeConfigHost).runtimeConfig = {
+      authConfig: {
+        redirectUri: 'window.location.origin'
+      } as any,
+      apiConfig: {} as any,
+      environment: undefined as any
+    };
+
+    const service = new ConfigService();
+
+    expect(service.authConfig.redirectUri).toBe(`${globalThis.location.origin}/auth/callback`);
+  });
+
+  it('should ignore runtime config when runtime overrides are disabled', () => {
+    (environment as { useRuntimeConfig: boolean }).useRuntimeConfig = false;
+    (globalThis as RuntimeConfigHost).runtimeConfig = {
+      authConfig: {
+        issuer: 'https://override.example.com'
+      } as any,
+      apiConfig: {
+        user_api_url: 'https://override.example.com/api'
+      } as any,
+      environment: {
+        authEnabled: false
+      }
+    };
+
+    const service = new ConfigService();
+
+    expect(service.authConfig.issuer).toBeDefined();
+    expect(service.authConfig.issuer).not.toBe('https://override.example.com');
+    expect(service.apiConfig.user_api_url).toBe(environment.production ? 'https://override.example.com/api' : 'http://localhost:30082/');
+    expect(service.environment.authEnabled).toBe(environment.authEnabled);
   });
 });

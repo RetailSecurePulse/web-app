@@ -1,0 +1,20 @@
+<div class="landing-shell">
+  <div class="hero-card">
+    <p class="eyebrow">RetailPulse Platform</p>
+    <h1 class="title">Manage your retail workspace from one place.</h1>
+    <p class="subtitle">
+      Continue with the secure sign-in flow for inventory, sales, reporting, and user management.
+    </p>
+
+    <div class="actions">
+      <a routerLink="/login" class="primary-button">Login</a>
+      <button
+        *ngIf="isAuthenticated"
+        type="button"
+        class="secondary-button"
+        (click)="continueAsAuthenticatedUser()">
+        Continue to Dashboard
+      </button>
+    </div>
+  </div>
+</div>

@@ -24,13 +24,11 @@ RUN npm run build -- --configuration "$BUILD_CONFIG" --aot --output-path dist
 # Stage 2: Serve the application using NGINX
 FROM nginx:alpine
 
-# Update package index and upgrade pcre2 (or all packages) to get the latest fixed version
+# Update packages and prepare the unprivileged runtime user in a single layer
 RUN apk update && \
     apk upgrade pcre2 && \
-    # Or use 'apk upgrade' to upgrade all packages if preferred
-    rm -rf /var/cache/apk/*
-
-RUN addgroup -g 1001 -S nginx-group && \
+    rm -rf /var/cache/apk/* && \
+    addgroup -g 1001 -S nginx-group && \
     adduser -u 1001 -S nginx-user -G nginx-group && \
     mkdir -p /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx && \
     chown -R nginx-user:nginx-group /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx && \

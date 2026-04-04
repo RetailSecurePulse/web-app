@@ -29,8 +29,7 @@ export class AuthCallbackComponent implements OnInit {
       } else {
         this.router.navigate(['/login']);
       }
-    }).catch(error => {
-      console.error('Callback initialization failed:', error);
+    }).catch(() => {
       this.router.navigate(['/login']);
     });
   }
