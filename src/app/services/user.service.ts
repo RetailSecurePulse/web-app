@@ -16,6 +16,7 @@ export class UserService {
   private readonly http: HttpClient = inject(HttpClient);
   private readonly config: ConfigService = inject(ConfigService);
   private readonly apiUrl = this.config.apiConfig.user_api_url + 'api/users';
+  private readonly defaultPassword = this.config.environment.defaultPassword;
 
   constructor() {}
 
@@ -29,6 +30,7 @@ export class UserService {
 
   getUserByUsername(username: string): Observable<User> {
     const urlGetUser = `${this.apiUrl}/username/${username}`;
+    console.log('Get User URL: ' + urlGetUser);
 
     return this.http.get<User>(urlGetUser).pipe(
       catchError((err) => {
@@ -40,7 +42,7 @@ export class UserService {
   createUser(newUser: User): Observable<User> {
     const create_user_dto: CreateUserDTO = {
       username: newUser.username,
-      password: this.createTemporaryPassword(),
+      password: this.defaultPassword,
       email: newUser.email,
       name: newUser.name,
       roles: newUser.roles
@@ -83,6 +85,7 @@ export class UserService {
     };
 
     const fullURL = `${this.apiUrl}/${userId}/change-password`;
+    console.log('Change Password URL: ' + fullURL);
 
     return this.http.patch<void>(fullURL, change_password_dto, {
       responseType: 'text' as 'json'
@@ -91,39 +94,5 @@ export class UserService {
         throw new Error(err.error.message);
       })
     );
-  }
-
-  private createTemporaryPassword(length: number = 20): string {
-    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-    const lower = 'abcdefghijkmnopqrstuvwxyz';
-    const digits = '23456789';
-    const all = upper + lower + digits;
-
-    const passwordChars = [
-      this.randomChar(upper),
-      this.randomChar(lower),
-      this.randomChar(digits)
-    ];
-
-    while (passwordChars.length < length) {
-      passwordChars.push(this.randomChar(all));
-    }
-
-    for (let i = passwordChars.length - 1; i > 0; i--) {
-      const j = this.randomInt(i + 1);
-      [passwordChars[i], passwordChars[j]] = [passwordChars[j], passwordChars[i]];
-    }
-
-    return passwordChars.join('');
-  }
-
-  private randomChar(charset: string): string {
-    return charset[this.randomInt(charset.length)];
-  }
-
-  private randomInt(maxExclusive: number): number {
-    const bytes = new Uint32Array(1);
-    crypto.getRandomValues(bytes);
-    return bytes[0] % maxExclusive;
   }
 }

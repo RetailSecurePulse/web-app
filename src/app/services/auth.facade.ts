@@ -51,6 +51,8 @@ export class AuthFacade {
       this.router.navigate(['/admin']);
     } else if (userRoles.includes('MANAGER')) {
       this.router.navigate(['/manager']);
+    } else if (userRoles.includes('INVENTORY_MANAGER')) {
+      this.router.navigate(['/inventory-manager']);
     } else if (userRoles.includes('CASHIER')) {
       this.router.navigate(['/cashier']);
     } else {

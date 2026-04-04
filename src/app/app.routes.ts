@@ -56,6 +56,18 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'inventory-manager',
+    loadComponent: lazyOperatorPage,
+    canActivate: [authGuard],
+    data: {roles: ['INVENTORY_MANAGER']},
+    children: [
+      {path: 'inventory-management', loadComponent: lazyInvenotryManagement},
+      {path: 'report-generation', loadComponent: lazyReportGeneration},
+      {path: 'profile', loadComponent: lazyProfile},
+      {path: '', redirectTo: 'profile', pathMatch: 'full' }, // Default childroute
+    ],
+  },
+  {
     path: 'cashier',
     loadComponent: lazyOperatorPage,
     canActivate: [authGuard],

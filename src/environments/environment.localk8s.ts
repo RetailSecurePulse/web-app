@@ -10,7 +10,7 @@ export const authConfig: AuthConfig = {
   useSilentRefresh: true,
   useHttpBasicAuth: false,
   disablePKCE: false,
-  showDebugInformation: false
+  showDebugInformation: true
 };
 
 export const apiConfig = {
@@ -28,5 +28,6 @@ export const environment = {
   useRuntimeConfig: true,
   devModeUser: 'superadmin',
   devModeRole: 'ADMIN', //'OPERATOR', //
+  defaultPassword: 'password1',
   stripePublicKey: 'pk_test_51Rwa9JCTUDg2faMiUxYG28Di0rDMjD4C5xEPCkn0nv6bPc1Qy8WvivfAhhykVxGlAqfeF2tvILpEd0K9je6WPhLo00bfZAazGS'
 };
