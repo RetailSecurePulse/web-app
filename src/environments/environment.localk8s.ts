@@ -4,6 +4,7 @@ export const authConfig: AuthConfig = {
   issuer: 'http://localhost:30081', // Update with your authorization server URL
   requireHttps: false,
   redirectUri: `${globalThis.location.origin}/auth/callback`,
+  postLogoutRedirectUri: `${globalThis.location.origin}`,
   clientId: 'client',
   responseType: 'code',
   scope: 'openid',

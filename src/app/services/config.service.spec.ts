@@ -114,6 +114,36 @@ describe('ConfigService', () => {
     expect(service.authConfig.redirectUri).toBe(`${globalThis.location.origin}/auth/callback`);
   });
 
+  it('should normalize runtime postLogoutRedirectUri placeholders to the current origin', () => {
+    (environment as { useRuntimeConfig: boolean }).useRuntimeConfig = true;
+    (globalThis as RuntimeConfigHost).runtimeConfig = {
+      authConfig: {
+        postLogoutRedirectUri: 'window.location.origin'
+      } as any,
+      apiConfig: {} as any,
+      environment: undefined as any
+    };
+
+    const service = new ConfigService();
+
+    expect(service.authConfig.postLogoutRedirectUri).toBe(`${globalThis.location.origin}`);
+  });
+
+  it('should normalize a bare runtime origin redirectUri to the callback route', () => {
+    (environment as { useRuntimeConfig: boolean }).useRuntimeConfig = true;
+    (globalThis as RuntimeConfigHost).runtimeConfig = {
+      authConfig: {
+        redirectUri: `${globalThis.location.origin}/`
+      } as any,
+      apiConfig: {} as any,
+      environment: undefined as any
+    };
+
+    const service = new ConfigService();
+
+    expect(service.authConfig.redirectUri).toBe(`${globalThis.location.origin}/auth/callback`);
+  });
+
   it('should ignore runtime config when runtime overrides are disabled', () => {
     (environment as { useRuntimeConfig: boolean }).useRuntimeConfig = false;
     (globalThis as RuntimeConfigHost).runtimeConfig = {

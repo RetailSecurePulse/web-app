@@ -16,18 +16,30 @@ describe('OAuthAuthenticationService', () => {
     mockOAuthService = jasmine.createSpyObj('OAuthService', [
       'configure',
       'setupAutomaticSilentRefresh',
+      'loadDiscoveryDocument',
       'loadDiscoveryDocumentAndTryLogin',
       'hasValidAccessToken',
       'getAccessToken',
+      'createLoginUrl',
       'initCodeFlow',
       'logOut',
     ]);
+    mockOAuthService.loadDiscoveryDocument.and.returnValue(Promise.resolve({} as any));
+    (mockOAuthService as any).createLoginUrl.and.returnValue(Promise.resolve('http://localhost:30081/auth/oauth2/authorize'));
+    (mockOAuthService as any).config = {
+      openUri: jasmine.createSpy('openUri')
+    };
+    (mockOAuthService as any).loginUrl = 'http://localhost:30081/auth/oauth2/authorize';
 
     mockRouter = jasmine.createSpyObj('Router', ['navigate']);
 
     // Provide mutable environment values through ConfigService
     configSpy = jasmine.createSpyObj('ConfigService', [], {
-      authConfig: { dummy: true }, // shape not important for test
+      authConfig: {
+        dummy: true,
+        redirectUri: 'http://localhost:30080/auth/callback',
+        postLogoutRedirectUri: 'http://localhost:30080'
+      }, // shape not important for test
       environment: {
         production: false,
         authEnabled: true,
@@ -100,12 +112,45 @@ describe('OAuthAuthenticationService', () => {
   });
 
   describe('login', () => {
-    it('should call initCodeFlow if auth enabled', () => {
+    it('should build a code flow URL with the configured callback if auth enabled', async () => {
       configSpy.environment.authEnabled = true;
 
       service.login();
+      await Promise.resolve();
 
-      expect(mockOAuthService.initCodeFlow).toHaveBeenCalled();
+      expect(mockOAuthService.configure).toHaveBeenCalledWith(jasmine.objectContaining({
+        redirectUri: 'http://localhost:30080/auth/callback'
+      }));
+      expect(mockOAuthService.redirectUri).toBe('http://localhost:30080/auth/callback');
+      expect((mockOAuthService as any).createLoginUrl).toHaveBeenCalledWith(
+        '',
+        '',
+        'http://localhost:30080/auth/callback',
+        false,
+        {}
+      );
+      expect((mockOAuthService as any).config?.openUri)
+        .toHaveBeenCalledWith('http://localhost:30081/auth/oauth2/authorize');
+      expect(mockOAuthService.loadDiscoveryDocument).not.toHaveBeenCalled();
+      expect(mockOAuthService.initCodeFlow).not.toHaveBeenCalled();
+    });
+
+    it('should load discovery before building the code flow URL when loginUrl is empty', async () => {
+      configSpy.environment.authEnabled = true;
+      (mockOAuthService as any).loginUrl = '';
+
+      service.login();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockOAuthService.loadDiscoveryDocument).toHaveBeenCalled();
+      expect((mockOAuthService as any).createLoginUrl).toHaveBeenCalledWith(
+        '',
+        '',
+        'http://localhost:30080/auth/callback',
+        false,
+        {}
+      );
     });
 
     it('should not call initCodeFlow if auth disabled', () => {
@@ -120,11 +165,26 @@ describe('OAuthAuthenticationService', () => {
   describe('logout', () => {
     it('should call logOut and navigate to /login if auth enabled', () => {
       configSpy.environment.authEnabled = true;
+      (mockOAuthService as any).logoutUrl = 'http://localhost:30081/auth/connect/logout';
 
       service.logout();
 
+      expect(mockOAuthService.postLogoutRedirectUri).toBe('http://localhost:30080');
       expect(mockOAuthService.logOut).toHaveBeenCalled();
-      expect(mockRouter.navigate).toHaveBeenCalledWith(['/login']);
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+    });
+
+    it('should load discovery before logout when logoutUrl is empty', async () => {
+      configSpy.environment.authEnabled = true;
+      (mockOAuthService as any).logoutUrl = '';
+
+      service.logout();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockOAuthService.loadDiscoveryDocument).toHaveBeenCalled();
+      expect(mockOAuthService.postLogoutRedirectUri).toBe('http://localhost:30080');
+      expect(mockOAuthService.logOut).toHaveBeenCalled();
     });
 
     it('should not call logOut if auth disabled', () => {

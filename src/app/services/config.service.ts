@@ -83,6 +83,7 @@ export class ConfigService {
     const normalizedConfig: AuthConfig = { ...config };
     const origin = globalThis.location?.origin ?? '';
     const redirectUri = normalizedConfig.redirectUri;
+    const postLogoutRedirectUri = normalizedConfig.postLogoutRedirectUri;
 
     // Runtime config can only safely store placeholders for the SPA callback,
     // because the real browser origin is only known at runtime in the browser.
@@ -90,6 +91,30 @@ export class ConfigService {
       normalizedConfig.redirectUri = `${origin}/auth/callback`;
     } else if (redirectUri === '/auth/callback') {
       normalizedConfig.redirectUri = `${origin}/auth/callback`;
+    } else if (typeof redirectUri === 'string' && origin) {
+      const normalizedRedirectUri = redirectUri.endsWith('/') ? redirectUri.slice(0, -1) : redirectUri;
+      const normalizedOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+
+      // Older runtime config may persist the bare SPA origin. Treat that as the
+      // callback root so OAuth requests stay aligned with the registered client.
+      if (normalizedRedirectUri === normalizedOrigin) {
+        normalizedConfig.redirectUri = `${normalizedOrigin}/auth/callback`;
+      }
+    }
+
+    if (postLogoutRedirectUri === 'window.location.origin' || postLogoutRedirectUri === 'globalThis.location.origin') {
+      normalizedConfig.postLogoutRedirectUri = origin;
+    } else if (postLogoutRedirectUri === '/') {
+      normalizedConfig.postLogoutRedirectUri = origin;
+    } else if (typeof postLogoutRedirectUri === 'string' && origin) {
+      const normalizedPostLogoutRedirectUri = postLogoutRedirectUri.endsWith('/')
+        ? postLogoutRedirectUri.slice(0, -1)
+        : postLogoutRedirectUri;
+      const normalizedOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+
+      if (normalizedPostLogoutRedirectUri === normalizedOrigin) {
+        normalizedConfig.postLogoutRedirectUri = normalizedOrigin;
+      }
     }
 
     return normalizedConfig;

@@ -4,6 +4,7 @@ export const authConfig: AuthConfig = {
   issuer: 'https://retailpulse.me:8081', // Update with your authorization server URL
   requireHttps: true,
   redirectUri: `${globalThis.location.origin}/auth/callback`,
+  postLogoutRedirectUri: `${globalThis.location.origin}`,
   clientId: 'client',
   responseType: 'code',
   scope: 'openid',

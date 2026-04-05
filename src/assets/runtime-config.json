@@ -3,6 +3,7 @@
     "issuer": "https://retailpulse.me:8081",
     "requireHttps": true,
     "redirectUri": "/auth/callback",
+    "postLogoutRedirectUri": "/",
     "clientId": "client",
     "responseType": "code",
     "scope": "openid",

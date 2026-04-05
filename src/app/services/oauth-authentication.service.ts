@@ -26,7 +26,7 @@ export class OAuthAuthenticationService {
   }
 
   constructor() {
-    this.oauthService.configure(this.config.authConfig);
+    this.applyAuthConfig();
     this.oauthService.setupAutomaticSilentRefresh();
   }
 
@@ -34,6 +34,8 @@ export class OAuthAuthenticationService {
     if (this.isDevAuthBypassEnabled) {
       return Promise.resolve();
     }
+
+    this.applyAuthConfig();
 
     return this.oauthService.loadDiscoveryDocumentAndTryLogin().then(() => {
       if (!this.oauthService.hasValidAccessToken()) {
@@ -48,15 +50,87 @@ export class OAuthAuthenticationService {
     if (this.isDevAuthBypassEnabled) {
       return;
     }
-    this.oauthService.initCodeFlow();
+
+    this.applyAuthConfig();
+    const oauthService = this.oauthService as OAuthService & {
+      loadDiscoveryDocument(): Promise<unknown>;
+      createLoginUrl(
+        state?: string,
+        loginHint?: string,
+        customRedirectUri?: string,
+        noPrompt?: boolean,
+        params?: object
+      ): Promise<string>;
+      loginUrl?: string;
+      config?: {
+        openUri?: (uri: string) => void;
+      };
+    };
+    const redirectUri = this.config.authConfig.redirectUri ?? `${globalThis.location.origin}/auth/callback`;
+    const openCodeFlow = () => oauthService.createLoginUrl('', '', redirectUri, false, {})
+      .then((url) => {
+        const openUri = oauthService.config?.openUri;
+        if (openUri) {
+          openUri(url);
+          return;
+        }
+
+        globalThis.location.assign(url);
+      })
+      .catch(() => {
+        this.oauthService.initCodeFlow();
+      });
+
+    if (oauthService.loginUrl) {
+      void openCodeFlow();
+      return;
+    }
+
+    void oauthService.loadDiscoveryDocument()
+      .then(() => {
+        if (redirectUri) {
+          this.oauthService.redirectUri = redirectUri;
+        }
+        return openCodeFlow();
+      })
+      .catch(() => {
+        this.oauthService.initCodeFlow();
+      });
   }
 
   logout(): void {
     if (this.isDevAuthBypassEnabled) {
       return;
     }
-    this.oauthService.logOut();
-    this.router.navigate(['/login']);
+
+    const oauthService = this.oauthService as OAuthService & {
+      loadDiscoveryDocument(): Promise<unknown>;
+      logoutUrl?: string;
+    };
+    const postLogoutRedirectUri = this.config.authConfig.postLogoutRedirectUri ?? globalThis.location.origin;
+
+    if (this.config.authConfig.redirectUri) {
+      this.oauthService.redirectUri = this.config.authConfig.redirectUri;
+    }
+    this.oauthService.postLogoutRedirectUri = postLogoutRedirectUri;
+
+    if (oauthService.logoutUrl) {
+      this.oauthService.logOut();
+      return;
+    }
+
+    void oauthService.loadDiscoveryDocument()
+      .then(() => {
+        if (this.config.authConfig.redirectUri) {
+          this.oauthService.redirectUri = this.config.authConfig.redirectUri;
+        }
+        this.oauthService.postLogoutRedirectUri = postLogoutRedirectUri;
+        this.oauthService.logOut();
+      })
+      .catch(() => {
+        this.oauthService.logOut(true);
+        this.router.navigate(['/login']);
+      });
   }
 
   get isAuthenticated(): boolean {
@@ -114,6 +188,21 @@ export class OAuthAuthenticationService {
       return jwtDecode<DecodedToken>(this.accessToken);
     } catch {
       return null;
+    }
+  }
+
+  private applyAuthConfig(): void {
+    const authConfig = { ...this.config.authConfig };
+
+    this.oauthService.configure(authConfig);
+
+    // The OAuth library falls back to window.location.origin when redirectUri
+    // is unset internally, so pin the resolved callback URL before each flow.
+    if (authConfig.redirectUri) {
+      this.oauthService.redirectUri = authConfig.redirectUri;
+    }
+    if (authConfig.postLogoutRedirectUri) {
+      this.oauthService.postLogoutRedirectUri = authConfig.postLogoutRedirectUri;
     }
   }
 }
