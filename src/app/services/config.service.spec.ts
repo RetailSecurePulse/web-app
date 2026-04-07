@@ -35,7 +35,6 @@ describe('ConfigService', () => {
         authEnabled: false,
         devModeUser: 'localdev',
         devModeRole: 'operator',
-        defaultPassword: 'runtime-password',
         stripePublicKey: 'pk_runtime'
       }
     };
@@ -46,7 +45,6 @@ describe('ConfigService', () => {
     expect(service.environment.authEnabled).toBeFalse();
     expect(service.environment.devModeUser).toBe('localdev');
     expect(service.environment.devModeRole).toBe('operator');
-    expect(service.environment.defaultPassword).toBe('runtime-password');
     expect(service.environment.stripePublicKey).toBe('pk_runtime');
   });
 
@@ -65,7 +63,6 @@ describe('ConfigService', () => {
       authEnabled: environment.authEnabled,
       devModeUser: environment.devModeUser,
       devModeRole: environment.devModeRole,
-      defaultPassword: environment.defaultPassword,
       stripePublicKey: environment.stripePublicKey
     });
   });

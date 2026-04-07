@@ -16,7 +16,6 @@ interface EnvironmentConfig {
   authEnabled: boolean;
   devModeUser: string;
   devModeRole: string;
-  defaultPassword: string;
   stripePublicKey: string;
 }
 
@@ -48,7 +47,6 @@ export class ConfigService {
         authEnabled: runtimeEnvironment?.authEnabled ?? env.authEnabled,
         devModeUser: runtimeEnvironment?.devModeUser ?? env.devModeUser,
         devModeRole: runtimeEnvironment?.devModeRole ?? env.devModeRole,
-        defaultPassword: runtimeEnvironment?.defaultPassword ?? env.defaultPassword,
         stripePublicKey: runtimeEnvironment?.stripePublicKey ?? env.stripePublicKey
       }
     };
