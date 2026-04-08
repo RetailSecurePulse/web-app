@@ -1,0 +1,99 @@
+:host {
+  display: block;
+}
+
+.login-entry-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+}
+
+.login-entry-card {
+  width: min(100%, 30rem);
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid rgba(217, 227, 236, 0.95);
+  border-radius: 1.5rem;
+  padding: 2rem 1.75rem;
+  box-shadow: 0 18px 42px rgba(34, 51, 68, 0.12);
+  text-align: center;
+}
+
+.eyebrow {
+  display: inline-block;
+  margin: 0 0 0.9rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  background: #eef5ff;
+  color: #55728f;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  color: #4a4a4a;
+  font-family: 'Poppins', sans-serif;
+  font-size: clamp(1.8rem, 4.4vw, 2.5rem);
+  line-height: 1.12;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: 0.85rem auto 0;
+  max-width: 24rem;
+  color: #5b6d7d;
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+.actions {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1.6rem;
+}
+
+.primary-button,
+.secondary-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  border: none;
+  border-radius: 999px;
+  padding: 0.82rem 1.15rem;
+  font-size: 0.98rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.primary-button {
+  background: #d9e8ff;
+  color: #4a4a4a;
+  box-shadow: 0 14px 26px rgba(115, 155, 214, 0.24);
+}
+
+.secondary-button {
+  background: #edf3fa;
+  color: #3a5068;
+}
+
+.primary-button:hover,
+.secondary-button:hover {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+  .login-entry-card {
+    padding: 1.6rem 1.25rem;
+    border-radius: 1.25rem;
+  }
+
+  .subtitle {
+    font-size: 0.92rem;
+  }
+}

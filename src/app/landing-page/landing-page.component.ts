@@ -1,11 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { AuthFacade } from '../services/auth.facade';
 
 @Component({
   selector: 'app-landing-page',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   templateUrl: './landing-page.component.html',
   styleUrl: './landing-page.component.css'
 })
@@ -18,5 +17,9 @@ export class LandingPageComponent {
 
   protected continueAsAuthenticatedUser(): void {
     this.authFacade.navigateToAuthenticatedUser();
+  }
+
+  protected startSignIn(): void {
+    this.authFacade.login();
   }
 }

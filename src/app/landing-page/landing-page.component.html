@@ -7,7 +7,12 @@
     </p>
 
     <div class="actions">
-      <a routerLink="/login" class="primary-button">Login</a>
+      <button
+        type="button"
+        class="primary-button"
+        (click)="startSignIn()">
+        Login
+      </button>
       <button
         *ngIf="isAuthenticated"
         type="button"

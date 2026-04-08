@@ -163,20 +163,24 @@ describe('OAuthAuthenticationService', () => {
   });
 
   describe('logout', () => {
-    it('should call logOut and navigate to /login if auth enabled', () => {
+    it('should clear tokens and redirect to the hosted IAM logout endpoint if auth enabled', () => {
       configSpy.environment.authEnabled = true;
       (mockOAuthService as any).logoutUrl = 'http://localhost:30081/auth/connect/logout';
+      configSpy.authConfig.issuer = 'http://localhost:30081/auth';
 
       service.logout();
 
       expect(mockOAuthService.postLogoutRedirectUri).toBe('http://localhost:30080');
       expect(mockOAuthService.logOut).toHaveBeenCalled();
+      expect((mockOAuthService.logOut as jasmine.Spy).calls.mostRecent().args[0]).toBeTrue();
+      expect((mockOAuthService as any).config?.openUri)
+        .toHaveBeenCalledWith('http://localhost:30081/auth/rp-logout');
       expect(mockRouter.navigate).not.toHaveBeenCalled();
     });
 
-    it('should load discovery before logout when logoutUrl is empty', async () => {
+    it('should load discovery before logout when issuer is empty', async () => {
       configSpy.environment.authEnabled = true;
-      (mockOAuthService as any).logoutUrl = '';
+      configSpy.authConfig.issuer = '';
 
       service.logout();
       await Promise.resolve();
@@ -185,6 +189,7 @@ describe('OAuthAuthenticationService', () => {
       expect(mockOAuthService.loadDiscoveryDocument).toHaveBeenCalled();
       expect(mockOAuthService.postLogoutRedirectUri).toBe('http://localhost:30080');
       expect(mockOAuthService.logOut).toHaveBeenCalled();
+      expect((mockOAuthService.logOut as jasmine.Spy).calls.mostRecent().args[0]).toBeTrue();
     });
 
     it('should not call logOut if auth disabled', () => {

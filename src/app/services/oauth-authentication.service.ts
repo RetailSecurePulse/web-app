@@ -106,16 +106,22 @@ export class OAuthAuthenticationService {
     const oauthService = this.oauthService as OAuthService & {
       loadDiscoveryDocument(): Promise<unknown>;
       logoutUrl?: string;
+      clientId?: string;
+      config?: {
+        openUri?: (uri: string) => void;
+      };
     };
     const postLogoutRedirectUri = this.config.authConfig.postLogoutRedirectUri ?? globalThis.location.origin;
+    const issuer = this.config.authConfig.issuer ?? '';
 
     if (this.config.authConfig.redirectUri) {
       this.oauthService.redirectUri = this.config.authConfig.redirectUri;
     }
     this.oauthService.postLogoutRedirectUri = postLogoutRedirectUri;
 
-    if (oauthService.logoutUrl) {
-      this.oauthService.logOut();
+    const hostedLogoutUrl = this.buildHostedLogoutUrl(issuer);
+    if (hostedLogoutUrl) {
+      this.redirectToHostedLogout(hostedLogoutUrl);
       return;
     }
 
@@ -125,7 +131,14 @@ export class OAuthAuthenticationService {
           this.oauthService.redirectUri = this.config.authConfig.redirectUri;
         }
         this.oauthService.postLogoutRedirectUri = postLogoutRedirectUri;
-        this.oauthService.logOut();
+        const refreshedHostedLogoutUrl = this.buildHostedLogoutUrl(this.config.authConfig.issuer ?? issuer);
+        if (refreshedHostedLogoutUrl) {
+          this.redirectToHostedLogout(refreshedHostedLogoutUrl);
+          return;
+        }
+
+        this.oauthService.logOut(true);
+        this.router.navigate(['/login']);
       })
       .catch(() => {
         this.oauthService.logOut(true);
@@ -204,5 +217,25 @@ export class OAuthAuthenticationService {
     if (authConfig.postLogoutRedirectUri) {
       this.oauthService.postLogoutRedirectUri = authConfig.postLogoutRedirectUri;
     }
+  }
+
+  private redirectToHostedLogout(logoutUrl: string): void {
+    this.oauthService.logOut(true);
+    const openUri = (this.oauthService as OAuthService & { config?: { openUri?: (uri: string) => void } }).config?.openUri;
+    if (openUri) {
+      openUri(logoutUrl);
+      return;
+    }
+
+    globalThis.location.assign(logoutUrl);
+  }
+
+  private buildHostedLogoutUrl(issuer?: string): string | null {
+    if (!issuer) {
+      return null;
+    }
+
+    const normalizedIssuer = issuer.endsWith('/') ? issuer.slice(0, -1) : issuer;
+    return `${normalizedIssuer}/rp-logout`;
   }
 }

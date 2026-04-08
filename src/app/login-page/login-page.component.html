@@ -1,6 +1,25 @@
-<div class="d-flex layout">
-  <!-- Main Content -->
-<div class="content flex-md-grow-1 main-content">
-  <app-login-form></app-login-form>
-</div>
+<div class="login-entry-shell">
+  <div class="login-entry-card">
+    <p class="eyebrow">RetailPulse IAM</p>
+    <h1 class="title">Continue to secure sign-in</h1>
+    <p class="subtitle">
+      Username, password, and email verification are handled in the RetailPulse Identity Access Management service.
+    </p>
+
+    <div class="actions">
+      <button
+        type="button"
+        class="primary-button"
+        (click)="continueToIdentityAccessManagement()">
+        Continue to IAM Sign-In
+      </button>
+      <button
+        *ngIf="isAuthenticated"
+        type="button"
+        class="secondary-button"
+        (click)="continueAsAuthenticatedUser()">
+        Continue to Dashboard
+      </button>
+    </div>
+  </div>
 </div>
