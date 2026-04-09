@@ -11,6 +11,7 @@ describe('LandingPageComponent', () => {
   beforeEach(async () => {
     authFacadeSpy = jasmine.createSpyObj('AuthFacade', [
       'isAuthenticated',
+      'login',
       'navigateToAuthenticatedUser'
     ]);
     authFacadeSpy.isAuthenticated.and.returnValue(false);
@@ -32,11 +33,14 @@ describe('LandingPageComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should show the login link for anonymous users', () => {
-    const link = fixture.nativeElement.querySelector('a[routerLink="/login"]');
+  it('should start IAM sign-in when an anonymous user clicks the primary action', () => {
+    const button: HTMLButtonElement | null = fixture.nativeElement.querySelector('.primary-button');
 
-    expect(link).not.toBeNull();
-    expect(link.textContent.trim()).toBe('Login');
+    expect(button).not.toBeNull();
+
+    button?.click();
+
+    expect(authFacadeSpy.login).toHaveBeenCalled();
   });
 
   it('should continue to the dashboard when an authenticated user clicks the secondary action', () => {

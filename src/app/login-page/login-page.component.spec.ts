@@ -1,9 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideHttpClient } from '@angular/common/http';
 
 import { createMockAuthService } from '../mock/auth.service.mock';
-import { ConfirmationService } from 'primeng/api';
 
 import { LoginPageComponent } from './login-page.component';
 import { AuthFacade } from '../services/auth.facade';
@@ -20,10 +17,7 @@ describe('LoginPageComponent', () => {
     await TestBed.configureTestingModule({
       imports: [LoginPageComponent],
       providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        { provide: AuthFacade, useValue: mockAuthService }, // Mock OauthAuthenticationService
-        ConfirmationService,
+        { provide: AuthFacade, useValue: mockAuthService }
       ]
     })
     .compileComponents();

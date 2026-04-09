@@ -8,11 +8,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     '/.well-known/openid-configuration',
     '/oauth2/jwks',
     '/oauth2/token',
-    '/login',
-    '/api/auth/login/status',
-    '/api/auth/login/start',
-    '/api/auth/login/verify',
-    '/api/auth/login/resend'
+    '/login'
   ];
 
   const authService = inject(AuthFacade);

@@ -55,11 +55,7 @@ describe('authInterceptor', () => {
       'http://localhost:8081/auth/.well-known/openid-configuration',
       'http://localhost:8081/auth/oauth2/jwks',
       'http://localhost:8081/auth/oauth2/token',
-      'http://localhost:8081/auth/login',
-      'http://localhost:8081/auth/api/auth/login/status',
-      'http://localhost:8081/auth/api/auth/login/start',
-      'http://localhost:8081/auth/api/auth/login/verify',
-      'http://localhost:8081/auth/api/auth/login/resend'
+      'http://localhost:8081/auth/login'
     ];
 
     excludedUrls.forEach(url => {
