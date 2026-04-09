@@ -47,34 +47,35 @@ export class PaymentSuccessDialogComponent {
   }
 
   printReceipt() {
-    // Create a minimal printable page and trigger browser print
     const html = this.renderReceiptHtml();
-    const w = window.open('', '_blank', 'noopener,noreferrer');
+    const blob = new Blob([html], { type: 'text/html' });
+    const receiptUrl = globalThis.URL.createObjectURL(blob);
+    const w = globalThis.open(receiptUrl, '_blank', 'noopener,noreferrer');
     if (!w) {
-      // popup blocked
+      globalThis.URL.revokeObjectURL(receiptUrl);
       alert('Popup blocked. Please allow popups to print the receipt.');
       return;
     }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    // give browser a small delay to render before printing
+
     setTimeout(() => {
       w.focus();
       w.print();
-      // optionally close after print (comment out if you want user control)
-      // w.close();
+      setTimeout(() => globalThis.URL.revokeObjectURL(receiptUrl), 1000);
     }, 250);
   }
 
   private renderReceiptHtml(): string {
     const d = this.data || {};
+    const transactionId = this.escapeHtml(d.transactionId ?? '-');
+    const createdAt = this.escapeHtml(d.createdAt ?? new Date().toLocaleString());
+    const amount = this.escapeHtml(this.formatMoney(d.amount));
+    const currency = this.escapeHtml(d.currency ?? '');
     const itemsHtml = (d.items || []).map(i => `
       <tr>
-        <td style="padding:4px 8px;">${i.sku ?? ''}</td>
-        <td style="padding:4px 8px;">${i.description ?? ''}</td>
-        <td style="padding:4px 8px;text-align:center;">${i.quantity ?? ''}</td>
-        <td style="padding:4px 8px;text-align:right;">${this.formatMoney(i.unitPrice)}</td>
+        <td style="padding:4px 8px;">${this.escapeHtml(i.sku ?? '')}</td>
+        <td style="padding:4px 8px;">${this.escapeHtml(i.description ?? '')}</td>
+        <td style="padding:4px 8px;text-align:center;">${this.escapeHtml(i.quantity ?? '')}</td>
+        <td style="padding:4px 8px;text-align:right;">${this.escapeHtml(this.formatMoney(i.unitPrice))}</td>
       </tr>
     `).join('');
 
@@ -83,7 +84,7 @@ export class PaymentSuccessDialogComponent {
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Receipt ${d.transactionId ?? ''}</title>
+        <title>Receipt ${transactionId}</title>
         <style>
           body { font-family: Arial, Helvetica, sans-serif; color: #222; margin: 24px; }
           h1 { font-size: 20px; margin-bottom: 4px; }
@@ -96,9 +97,9 @@ export class PaymentSuccessDialogComponent {
       <body>
         <h1>Payment Receipt</h1>
         <div class="meta">
-          <div>Transaction: ${d.transactionId ?? '-'}</div>
-          <div>Date: ${d.createdAt ?? new Date().toLocaleString()}</div>
-          <div>Amount: ${this.formatMoney(d.amount)} ${d.currency ?? ''}</div>
+          <div>Transaction: ${transactionId}</div>
+          <div>Date: ${createdAt}</div>
+          <div>Amount: ${amount} ${currency}</div>
         </div>
 
         <table>
@@ -115,7 +116,7 @@ export class PaymentSuccessDialogComponent {
           </tbody>
         </table>
 
-        <div class="total">TOTAL: ${this.formatMoney(d.amount)} ${d.currency ?? ''}</div>
+        <div class="total">TOTAL: ${amount} ${currency}</div>
 
         <div style="margin-top:18px;font-size:12px;color:#666;">
           Thank you for your purchase.
@@ -131,5 +132,14 @@ export class PaymentSuccessDialogComponent {
     if (isNaN(num)) return String(value);
     // Format to 2 decimal places - adjust locale/currency as needed
     return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  private escapeHtml(value: unknown): string {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 }

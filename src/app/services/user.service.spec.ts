@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { UserService } from './user.service';
 import { User, CreateUserDTO, UpdateUserDTO, ChangePasswordDTO } from '../models/user.model';
-import { apiConfig, environment } from '../../environments/environment';
+import { apiConfig } from '../../environments/environment';
 
 describe('UserService', () => {
   let service: UserService;
@@ -86,19 +86,17 @@ describe('UserService', () => {
 
   describe('createUser', () => {
     it('should POST new user', () => {
-      const dto: CreateUserDTO = {
-        username: mockUser.username,
-        password: environment.defaultPassword,
-        email: mockUser.email,
-        name: mockUser.name,
-        roles: mockUser.roles
-      };
       service.createUser(mockUser).subscribe(user => {
         expect(user).toEqual(mockUser);
       });
       const req = httpMock.expectOne(apiUrl);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual(dto);
+      const body = req.request.body as CreateUserDTO;
+      expect(body.username).toBe(mockUser.username);
+      expect(body.email).toBe(mockUser.email);
+      expect(body.name).toBe(mockUser.name);
+      expect(body.roles).toEqual(mockUser.roles);
+      expect(body.password).toMatch(/^[A-Za-z0-9]{20}$/);
       req.flush(mockUser);
     });
 

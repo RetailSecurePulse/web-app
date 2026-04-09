@@ -16,101 +16,226 @@ export class OAuthAuthenticationService {
   private readonly router: Router = inject(Router);
   private readonly oauthService: OAuthService = inject(OAuthService);
   private readonly config: ConfigService = inject(ConfigService);
+  private readonly unauthorizedToken: DecodedToken = {
+    roles: ['UNAUTHORIZED'],
+    sub: 'UNAUTHORIZED'
+  };
+
+  private get isDevAuthBypassEnabled(): boolean {
+    return !this.config.environment.production && !this.config.environment.authEnabled;
+  }
 
   constructor() {
-    this.oauthService.configure(this.config.authConfig);
+    this.applyAuthConfig();
     this.oauthService.setupAutomaticSilentRefresh();
   }
 
   public initializeAuth(): Promise<void> {
-    if (!this.config.environment.authEnabled) {
-      console.log('Authentication is disabled. Using dummy token.');
+    if (this.isDevAuthBypassEnabled) {
       return Promise.resolve();
     }
 
+    this.applyAuthConfig();
+
     return this.oauthService.loadDiscoveryDocumentAndTryLogin().then(() => {
-      if (this.oauthService.hasValidAccessToken()) {
-        console.log('Token: \r\n' + this.accessToken);
-      } else {
-        console.log('User is not logged in');
+      if (!this.oauthService.hasValidAccessToken()) {
         this.router.navigate(['/login']);
       }
-    }).catch(error => {
-      console.log('Error during OAuth configuration', error);
+    }).catch(() => {
       this.router.navigate(['/login']);
     });
   }
 
   login(): void {
-    if (!this.config.environment.authEnabled) {
-      console.log('Authentication is disabled');
+    if (this.isDevAuthBypassEnabled) {
       return;
     }
-    this.oauthService.initCodeFlow();
+
+    this.applyAuthConfig();
+    const oauthService = this.oauthService as OAuthService & {
+      loadDiscoveryDocument(): Promise<unknown>;
+      createLoginUrl(
+        state?: string,
+        loginHint?: string,
+        customRedirectUri?: string,
+        noPrompt?: boolean,
+        params?: object
+      ): Promise<string>;
+      loginUrl?: string;
+      config?: {
+        openUri?: (uri: string) => void;
+      };
+    };
+    const redirectUri = this.config.authConfig.redirectUri ?? `${globalThis.location.origin}/auth/callback`;
+    const openCodeFlow = () => oauthService.createLoginUrl('', '', redirectUri, false, {})
+      .then((url) => {
+        const openUri = oauthService.config?.openUri;
+        if (openUri) {
+          openUri(url);
+          return;
+        }
+
+        globalThis.location.assign(url);
+      })
+      .catch(() => {
+        this.oauthService.initCodeFlow();
+      });
+
+    if (oauthService.loginUrl) {
+      void openCodeFlow();
+      return;
+    }
+
+    void oauthService.loadDiscoveryDocument()
+      .then(() => {
+        if (redirectUri) {
+          this.oauthService.redirectUri = redirectUri;
+        }
+        return openCodeFlow();
+      })
+      .catch(() => {
+        this.oauthService.initCodeFlow();
+      });
   }
 
   logout(): void {
-    if (!this.config.environment.authEnabled) {
-      console.log('Authentication is disabled');
+    if (this.isDevAuthBypassEnabled) {
       return;
     }
-    this.oauthService.logOut();
-    this.router.navigate(['/login']);
+
+    const oauthService = this.oauthService as OAuthService & {
+      loadDiscoveryDocument(): Promise<unknown>;
+      logoutUrl?: string;
+      clientId?: string;
+      config?: {
+        openUri?: (uri: string) => void;
+      };
+    };
+    const postLogoutRedirectUri = this.config.authConfig.postLogoutRedirectUri ?? globalThis.location.origin;
+    const issuer = this.config.authConfig.issuer ?? '';
+
+    if (this.config.authConfig.redirectUri) {
+      this.oauthService.redirectUri = this.config.authConfig.redirectUri;
+    }
+    this.oauthService.postLogoutRedirectUri = postLogoutRedirectUri;
+
+    const hostedLogoutUrl = this.buildHostedLogoutUrl(issuer);
+    if (hostedLogoutUrl) {
+      this.redirectToHostedLogout(hostedLogoutUrl);
+      return;
+    }
+
+    void oauthService.loadDiscoveryDocument()
+      .then(() => {
+        if (this.config.authConfig.redirectUri) {
+          this.oauthService.redirectUri = this.config.authConfig.redirectUri;
+        }
+        this.oauthService.postLogoutRedirectUri = postLogoutRedirectUri;
+        const refreshedHostedLogoutUrl = this.buildHostedLogoutUrl(this.config.authConfig.issuer ?? issuer);
+        if (refreshedHostedLogoutUrl) {
+          this.redirectToHostedLogout(refreshedHostedLogoutUrl);
+          return;
+        }
+
+        this.oauthService.logOut(true);
+        this.router.navigate(['/login']);
+      })
+      .catch(() => {
+        this.oauthService.logOut(true);
+        this.router.navigate(['/login']);
+      });
   }
 
   get isAuthenticated(): boolean {
-    if (!this.config.environment.authEnabled) {
-      console.log('Authentication is disabled');
+    if (this.isDevAuthBypassEnabled) {
       return true;
     }
     return this.oauthService.hasValidAccessToken();
   }
 
   getUserRole(): string[] {
-    if (!this.config.environment.authEnabled) {
+    if (this.isDevAuthBypassEnabled) {
       return [this.config.environment.devModeRole.toUpperCase()];
     }
 
-    if (!this.accessToken) {
+    const decodedToken = this.decodeAccessToken();
+    if (!decodedToken) {
       return ['UNAUTHORIZED'];
     }
 
-    try {
-      const decodedToken = jwtDecode<DecodedToken>(this.accessToken);
-      return decodedToken.roles?.map(role => role.toUpperCase()) || ['UNAUTHORIZED'];
-    } catch (error) {
-      console.error('Error decoding token:', error);
-      return ['UNAUTHORIZED'];
-    }
+    return decodedToken.roles?.map(role => role.toUpperCase()) || ['UNAUTHORIZED'];
   }
 
   getUsername(): string {
-    console.log('Casper Auth Mode: ' + this.config.environment.authEnabled);
-    if (!this.config.environment.authEnabled) {
+    if (this.isDevAuthBypassEnabled) {
       return this.config.environment.devModeUser;
     }
-    if (!this.accessToken) {
-      return 'UNAUTHORIZED';
-    }
-    const decodedToken: DecodedToken = jwtDecode(this.accessToken);
-    return decodedToken.sub;
+
+    return this.decodeAccessToken()?.sub ?? 'UNAUTHORIZED';
   }
 
   get accessToken(): string {
-    if (!this.config.environment.authEnabled) {
+    if (this.isDevAuthBypassEnabled) {
       return 'dummy-access-token';
     }
     return this.oauthService.getAccessToken();
   }
 
   getDecodedToken(): DecodedToken {
-    if (!this.config.environment.authEnabled) {
-      console.log('Authentication is disabled');
+    if (this.isDevAuthBypassEnabled) {
       return {
         roles: [this.config.environment.devModeRole],
         sub: this.config.environment.devModeUser
       };
     }
-    return jwtDecode(this.accessToken);
+
+    return this.decodeAccessToken() ?? this.unauthorizedToken;
+  }
+
+  private decodeAccessToken(): DecodedToken | null {
+    if (!this.accessToken) {
+      return null;
+    }
+
+    try {
+      return jwtDecode<DecodedToken>(this.accessToken);
+    } catch {
+      return null;
+    }
+  }
+
+  private applyAuthConfig(): void {
+    const authConfig = { ...this.config.authConfig };
+
+    this.oauthService.configure(authConfig);
+
+    // The OAuth library falls back to window.location.origin when redirectUri
+    // is unset internally, so pin the resolved callback URL before each flow.
+    if (authConfig.redirectUri) {
+      this.oauthService.redirectUri = authConfig.redirectUri;
+    }
+    if (authConfig.postLogoutRedirectUri) {
+      this.oauthService.postLogoutRedirectUri = authConfig.postLogoutRedirectUri;
+    }
+  }
+
+  private redirectToHostedLogout(logoutUrl: string): void {
+    this.oauthService.logOut(true);
+    const openUri = (this.oauthService as OAuthService & { config?: { openUri?: (uri: string) => void } }).config?.openUri;
+    if (openUri) {
+      openUri(logoutUrl);
+      return;
+    }
+
+    globalThis.location.assign(logoutUrl);
+  }
+
+  private buildHostedLogoutUrl(issuer?: string): string | null {
+    if (!issuer) {
+      return null;
+    }
+
+    const normalizedIssuer = issuer.endsWith('/') ? issuer.slice(0, -1) : issuer;
+    return `${normalizedIssuer}/rp-logout`;
   }
 }

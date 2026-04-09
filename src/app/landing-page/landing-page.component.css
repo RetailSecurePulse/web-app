@@ -2,7 +2,7 @@
   display: block;
 }
 
-.login-entry-shell {
+.landing-shell {
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -10,8 +10,8 @@
   padding: 1.5rem 1rem;
 }
 
-.login-entry-card {
-  width: min(100%, 30rem);
+.hero-card {
+  width: min(100%, 28rem);
   background: rgba(255, 255, 255, 0.97);
   border: 1px solid rgba(217, 227, 236, 0.95);
   border-radius: 1.5rem;
@@ -44,7 +44,7 @@
 
 .subtitle {
   margin: 0.85rem auto 0;
-  max-width: 24rem;
+  max-width: 23rem;
   color: #5b6d7d;
   font-size: 0.98rem;
   line-height: 1.6;
@@ -88,7 +88,7 @@
 }
 
 @media (max-width: 640px) {
-  .login-entry-card {
+  .hero-card {
     padding: 1.6rem 1.25rem;
     border-radius: 1.25rem;
   }

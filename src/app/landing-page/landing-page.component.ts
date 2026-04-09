@@ -3,23 +3,23 @@ import { Component, inject } from '@angular/core';
 import { AuthFacade } from '../services/auth.facade';
 
 @Component({
-  selector: 'app-login-page',
+  selector: 'app-landing-page',
   imports: [CommonModule],
-  templateUrl: './login-page.component.html',
-  styleUrl: './login-page.component.css'
+  templateUrl: './landing-page.component.html',
+  styleUrl: './landing-page.component.css'
 })
-export class LoginPageComponent {
+export class LandingPageComponent {
   private readonly authFacade = inject(AuthFacade);
 
   protected get isAuthenticated(): boolean {
     return this.authFacade.isAuthenticated();
   }
 
-  protected continueToIdentityAccessManagement(): void {
-    this.authFacade.login();
-  }
-
   protected continueAsAuthenticatedUser(): void {
     this.authFacade.navigateToAuthenticatedUser();
+  }
+
+  protected startSignIn(): void {
+    this.authFacade.login();
   }
 }

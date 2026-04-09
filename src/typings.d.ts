@@ -11,7 +11,6 @@ interface RuntimeConfig {
     authEnabled: boolean;
     devModeUser: string;
     devModeRole: string;
-    defaultPassword: string;
     stripePublicKey: string;
   };
 }

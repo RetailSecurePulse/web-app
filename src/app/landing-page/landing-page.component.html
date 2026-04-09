@@ -1,17 +1,17 @@
-<div class="login-entry-shell">
-  <div class="login-entry-card">
-    <p class="eyebrow">RetailPulse IAM</p>
-    <h1 class="title">Continue to secure sign-in</h1>
+<div class="landing-shell">
+  <div class="hero-card">
+    <p class="eyebrow">RetailPulse Platform</p>
+    <h1 class="title">Manage your retail workspace from one place.</h1>
     <p class="subtitle">
-      Username, password, and email verification are handled in the RetailPulse Identity Access Management service.
+      Continue with the secure sign-in flow for inventory, sales, reporting, and user management.
     </p>
 
     <div class="actions">
       <button
         type="button"
         class="primary-button"
-        (click)="continueToIdentityAccessManagement()">
-        Continue to IAM Sign-In
+        (click)="startSignIn()">
+        Login
       </button>
       <button
         *ngIf="isAuthenticated"

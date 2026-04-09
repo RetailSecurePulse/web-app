@@ -1,51 +1,40 @@
 import {inject} from '@angular/core';
 import {HttpInterceptorFn} from '@angular/common/http';
 import { AuthFacade } from '../services/auth.facade';
+import { ConfigService } from '../services/config.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  console.log('Processing authInterceptor...');
-
-  const patterns = [
+  const excludedPaths = [
     '/.well-known/openid-configuration',
     '/oauth2/jwks',
     '/oauth2/token',
     '/login'
   ];
 
-  // Inject the OauthAuthenticationService
   const authService = inject(AuthFacade);
-
-  // Get the token from the OauthAuthenticationService
+  const configService = inject(ConfigService);
   const token = authService.getAccessToken();
+  const protectedOrigins = Object.values(configService.apiConfig)
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+    .map(value => value.replace(/\/+$/, ''));
 
-  // Skip the interceptor for OPTIONS requests (Preflight request)
   if (req.method === 'OPTIONS') {
-    console.log('Method is OPTIONS, skipping authInterceptor...');
-    return next(req); // Simply pass the OPTIONS request without modification
+    return next(req);
   }
 
-  // Exclude the URL of the openid-configuration endpoint
-  const matches = patterns.some(pattern => req.url.includes(pattern));
-  if (matches) {
-    console.log('Pattern matched, skipping authInterceptor...');
-    return next(req); // Skip adding the Authorization header for this request
+  const isExcludedPath = excludedPaths.some(pattern => req.url.includes(pattern));
+  const isProtectedApiRequest = protectedOrigins.some(prefix => req.url.startsWith(prefix));
+  if (isExcludedPath || !isProtectedApiRequest) {
+    return next(req);
   }
 
-  // Clone the request and add the authorization header if the token exists
   if (token) {
-    console.log('Token found, append token');
     req = req.clone({
       setHeaders: {
         Authorization: `Bearer ${token}`
       }
     });
   }
-  else{
-    console.log('No token found');
-  }
 
-  console.log('Request after authInterceptor:', req);
-
-  // Pass the request to the next handler
   return next(req);
 };

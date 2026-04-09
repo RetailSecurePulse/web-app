@@ -1,12 +1,11 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { OAuthAuthenticationService, DecodedToken } from './oauth-authentication.service';
-import {JwtPayload} from 'jwt-decode';
+import { DecodedToken, OAuthAuthenticationService } from './oauth-authentication.service';
 
 @Injectable({
   providedIn: 'root'
 })
-export class AuthFacade { // Renamed class to AuthFacade
+export class AuthFacade {
   constructor(
     private router: Router,
     private oauthAuthService: OAuthAuthenticationService
@@ -40,22 +39,24 @@ export class AuthFacade { // Renamed class to AuthFacade
     return this.oauthAuthService.accessToken;
   }
 
-  getDecodedToken(): DecodedToken | JwtPayload {
+  getDecodedToken(): DecodedToken {
     return this.oauthAuthService.getDecodedToken();
   }
 
   navigateToAuthenticatedUser(): void {
+    // Keep the route decision in one place so the landing page, callback flow,
+    // and guard-driven redirects all resolve users to the same shell route.
     const userRoles = this.getUserRole();
-    if (userRoles.includes("ADMIN") || userRoles.includes("SUPER")) {
+    if (userRoles.includes('ADMIN') || userRoles.includes('SUPER')) {
       this.router.navigate(['/admin']);
-    } else if (userRoles.includes("MANAGER")) {
+    } else if (userRoles.includes('MANAGER')) {
       this.router.navigate(['/manager']);
-    } else if (userRoles.includes("INVENTORY_MANAGER")) {
+    } else if (userRoles.includes('INVENTORY_MANAGER')) {
       this.router.navigate(['/inventory-manager']);
-    } else if (userRoles.includes("CASHIER")) {
+    } else if (userRoles.includes('CASHIER')) {
       this.router.navigate(['/cashier']);
     } else {
-      this.router.navigate(['/']); // Default route
+      this.router.navigate(['/']);
     }
   }
 }
