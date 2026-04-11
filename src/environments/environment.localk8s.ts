@@ -7,7 +7,7 @@ export const authConfig: AuthConfig = {
   postLogoutRedirectUri: `${globalThis.location.origin}`,
   clientId: 'client',
   responseType: 'code',
-  scope: 'openid',
+  scope: 'openid offline_access',
   useSilentRefresh: true,
   useHttpBasicAuth: false,
   disablePKCE: false,

@@ -6,7 +6,7 @@ import { InventoryService } from './inventory.service';
 import { BusinessEntity } from '../business-entity-management/business-entity.model';
 import { InventoryTransaction, SummaryData } from './inventory.model';
 
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MatSort } from '@angular/material/sort';
@@ -93,13 +93,14 @@ describe('InventoryManagementComponent', () => {
     expect(component.loadData).toHaveBeenCalled();
   });
 
-  it('should fetch business entities and populate shopMap', () => {
+  it('should fetch business entities and populate shopMap', fakeAsync(() => {
     businessEntityServiceSpy.getBusinessEntities.and.returnValue(of(mockBusinessEntities));
     component.fetchBusinessEntities();
+    flushMicrotasks();
     expect(businessEntityServiceSpy.getBusinessEntities).toHaveBeenCalled();
     expect(component.businessOptions.length).toBe(2);
     expect(component.shopMap[1]).toBe('Shop 1');
-  });
+  }));
 
   it('should handle error when fetching business entities', () => {
     spyOn(console, 'error'); // silence expected error path
@@ -119,20 +120,22 @@ describe('InventoryManagementComponent', () => {
     expect(component.tableData.filteredData.length).toBeGreaterThanOrEqual(0);
   });
 
-  it('should handle onFilterChange with no inventory data', () => {
+  it('should handle onFilterChange with no inventory data', fakeAsync(() => {
     inventoryServiceSpy.getInventoryByBusinessEntity.and.returnValue(of([]));
     component.onFilterChange(1);
+    flushMicrotasks();
     expect(component.tableData.data).toEqual([]);
     expect(component.isLoading).toBeFalse();
-  });
+  }));
 
-  it('should handle error in onFilterChange', () => {
+  it('should handle error in onFilterChange', fakeAsync(() => {
     spyOn(console, 'error'); // silence expected error path
     inventoryServiceSpy.getInventoryByBusinessEntity.and.returnValue(throwError(() => new Error('fail')));
     component.onFilterChange(1);
+    flushMicrotasks();
     expect(component.errorMessage).toBe('Failed to load inventory data');
     expect(component.isLoading).toBeFalse();
-  });
+  }));
 
   it('should handle error in forkJoin in onFilterChange', fakeAsync(() => {
     spyOn(console, 'error'); // silence expected error path
@@ -149,6 +152,7 @@ describe('InventoryManagementComponent', () => {
 
     component.onFilterChange(1);
     tick();
+    flushMicrotasks();
     expect(component.isLoading).toBeFalse();
   }));
 
@@ -179,6 +183,7 @@ describe('InventoryManagementComponent', () => {
     inventoryServiceSpy.getInventoryTransaction.and.returnValue(throwError(() => new Error('fail')));
     (component as any).loadInventoryTransaction();
     tick();
+    flushMicrotasks();
     expect(component.inventoryTransactions.data).toEqual([]);
     expect(component.errorMessage).toBe('Failed to load transactions');
     expect(component.isLoading).toBeFalse();
@@ -188,6 +193,7 @@ describe('InventoryManagementComponent', () => {
     inventoryServiceSpy.getInventoryTransaction.and.returnValue(of([]));
     (component as any).loadInventoryTransaction();
     tick();
+    flushMicrotasks();
     expect(component.errorMessage).toBe('No inventory transactions found.');
   }));
 
@@ -206,6 +212,7 @@ describe('InventoryManagementComponent', () => {
 
     component.onFilterChange(1);
     tick();
+    flushMicrotasks();
     expect(component.isLoading).toBeFalse();
   }));
 
@@ -235,16 +242,18 @@ describe('InventoryManagementComponent', () => {
 
     component.onFilterChange(1);
     tick();
+    flushMicrotasks();
     expect(component.isLoading).toBeFalse();
   }));
 
   // Edge: fetchBusinessEntities returns empty array
-  it('should handle fetchBusinessEntities with empty array', () => {
+  it('should handle fetchBusinessEntities with empty array', fakeAsync(() => {
     businessEntityServiceSpy.getBusinessEntities.and.returnValue(of([]));
     component.fetchBusinessEntities();
+    flushMicrotasks();
     expect(component.businessOptions.length).toBe(0);
     expect(Object.keys(component.shopMap).length).toBe(0);
-  });
+  }));
 
   // Edge: openModal when already open
   it('should not open modal if already open', () => {
@@ -254,12 +263,13 @@ describe('InventoryManagementComponent', () => {
   });
 
   // Edge: onFilterChange with invalid businessEntityId
-  it('should handle onFilterChange with invalid businessEntityId', () => {
+  it('should handle onFilterChange with invalid businessEntityId', fakeAsync(() => {
     inventoryServiceSpy.getInventoryByBusinessEntity.and.returnValue(of([]));
     component.onFilterChange(-1);
+    flushMicrotasks();
     expect(component.tableData.data).toEqual([]);
     expect(component.isLoading).toBeFalse();
-  });
+  }));
 
   // Edge: loadInventoryTransaction returns null
   it('should handle null data in loadInventoryTransaction', fakeAsync(() => {
@@ -267,6 +277,7 @@ describe('InventoryManagementComponent', () => {
     inventoryServiceSpy.getInventoryTransaction.and.returnValue(of(null as any));
     (component as any).loadInventoryTransaction();
     tick();
+    flushMicrotasks();
     expect(component.inventoryTransactions.data).toEqual([]);
     expect(component.errorMessage).toBe('No inventory transactions found.');
     expect(component.isLoading).toBeFalse();

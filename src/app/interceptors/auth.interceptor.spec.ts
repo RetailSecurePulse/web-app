@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, flushMicrotasks } from '@angular/core/testing';
 import { HttpClient } from '@angular/common/http';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -14,8 +14,8 @@ describe('authInterceptor', () => {
   let mockConfigService: Pick<ConfigService, 'apiConfig'>;
 
   beforeEach(() => {
-    mockAuthFacade = jasmine.createSpyObj<AuthFacade>('AuthFacade', ['getAccessToken']);
-    mockAuthFacade.getAccessToken.and.returnValue('fake-token');
+    mockAuthFacade = jasmine.createSpyObj<AuthFacade>('AuthFacade', ['getAuthorizationToken']);
+    mockAuthFacade.getAuthorizationToken.and.returnValue(Promise.resolve('fake-token'));
     mockConfigService = {
       apiConfig: {
         user_api_url: 'http://localhost:30082/',
@@ -50,7 +50,7 @@ describe('authInterceptor', () => {
     httpTestingController.verify();
   });
 
-  it('should skip adding token for excluded auth URLs', () => {
+  it('should skip adding token for excluded auth URLs', fakeAsync(() => {
     const excludedUrls = [
       'http://localhost:8081/auth/.well-known/openid-configuration',
       'http://localhost:8081/auth/oauth2/jwks',
@@ -59,7 +59,7 @@ describe('authInterceptor', () => {
     ];
 
     excludedUrls.forEach(url => {
-      mockAuthFacade.getAccessToken.and.returnValue('fake-token');
+      mockAuthFacade.getAuthorizationToken.and.returnValue(Promise.resolve('fake-token'));
 
       httpClient.get(url).subscribe(res => expect(res).toBeTruthy());
 
@@ -67,10 +67,10 @@ describe('authInterceptor', () => {
       expect(req.request.headers.has('Authorization')).toBeFalse();
       req.flush({});
     });
-  });
+  }));
 
   it('should skip adding token for OPTIONS method', () => {
-    mockAuthFacade.getAccessToken.and.returnValue('fake-token');
+    mockAuthFacade.getAuthorizationToken.and.returnValue(Promise.resolve('fake-token'));
 
     httpClient.options('/api/data').subscribe(res => expect(res).toBeTruthy());
 
@@ -81,7 +81,7 @@ describe('authInterceptor', () => {
   });
 
   it('should not add token to non-API URLs', () => {
-    mockAuthFacade.getAccessToken.and.returnValue('fake-token');
+    mockAuthFacade.getAuthorizationToken.and.returnValue(Promise.resolve('fake-token'));
 
     httpClient.get('http://example.com/public').subscribe(res => expect(res).toBeTruthy());
 
@@ -90,36 +90,50 @@ describe('authInterceptor', () => {
     req.flush({});
   });
   
-  it('should not modify request when token is undefined', () => {
-    mockAuthFacade.getAccessToken.and.returnValue(undefined as any);
+  it('should not modify request when token is undefined', fakeAsync(() => {
+    mockAuthFacade.getAuthorizationToken.and.returnValue(Promise.resolve(undefined as any));
 
     httpClient.get('http://localhost:30082/api/data').subscribe(res => expect(res).toBeTruthy());
+    flushMicrotasks();
 
     const req = httpTestingController.expectOne('http://localhost:30082/api/data');
     expect(req.request.headers.has('Authorization')).toBeFalse();
     req.flush({});
-  });
+  }));
 
-  it('should not interfere with other interceptors or headers', () => {
-    mockAuthFacade.getAccessToken.and.returnValue('fake-token');
+  it('should not interfere with other interceptors or headers', fakeAsync(() => {
+    mockAuthFacade.getAuthorizationToken.and.returnValue(Promise.resolve('fake-token'));
 
     httpClient.get('http://localhost:30082/api/data', {
       headers: { 'Content-Type': 'application/json' }
     }).subscribe(res => expect(res).toBeTruthy());
+    flushMicrotasks();
 
     const req = httpTestingController.expectOne('http://localhost:30082/api/data');
     expect(req.request.headers.get('Authorization')).toBe('Bearer fake-token');
     expect(req.request.headers.get('Content-Type')).toBe('application/json');
     req.flush({});
-  });
+  }));
 
-  it('should throw error if request is not handled', () => {
+  it('should throw error if request is not handled', fakeAsync(() => {
     httpClient.get('http://localhost:30082/api/data').subscribe({
       next: () => fail('Should not reach here'),
       error: err => expect(err).toBeTruthy()
     });
+    flushMicrotasks();
 
     const req = httpTestingController.expectOne('http://localhost:30082/api/data');
     req.error(new ErrorEvent('Network error'));
-  });
+  }));
+
+  it('should await a refreshed token before forwarding protected requests', fakeAsync(() => {
+    mockAuthFacade.getAuthorizationToken.and.returnValue(Promise.resolve('fresh-token'));
+
+    httpClient.get('http://localhost:30084/api/products').subscribe(res => expect(res).toBeTruthy());
+    flushMicrotasks();
+
+    const req = httpTestingController.expectOne('http://localhost:30084/api/products');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer fresh-token');
+    req.flush({});
+  }));
 });
