@@ -36,6 +36,30 @@ ng build
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
+## Production Build
+
+To generate the production Angular bundle, run:
+
+```bash
+npm run build:prod
+```
+
+This uses the Angular `production` configuration and writes the output to `dist/`.
+
+To build the production Docker image for the web app, run:
+
+```bash
+docker build --build-arg BUILD_CONFIG=production -t rp-web-app:prod .
+```
+
+The Dockerfile defaults `BUILD_CONFIG` to `production`, so this equivalent command also works:
+
+```bash
+docker build -t rp-web-app:prod .
+```
+
+If you are preparing a production deployment through Helm, make sure the generated image is used together with the production values file under [../RetailPulsePolyRepo/helm/values-prod.yaml](/Users/aungtuntun/SchoolProjects/SecuredRetailPulsePolyRepo/RetailPulsePolyRepo/helm/values-prod.yaml).
+
 ## Running unit tests
 
 To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:

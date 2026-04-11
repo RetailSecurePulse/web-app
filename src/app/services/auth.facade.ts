@@ -39,6 +39,10 @@ export class AuthFacade {
     return this.oauthAuthService.accessToken;
   }
 
+  getAuthorizationToken(): Promise<string> {
+    return this.oauthAuthService.getAuthorizationToken();
+  }
+
   getDecodedToken(): DecodedToken {
     return this.oauthAuthService.getDecodedToken();
   }

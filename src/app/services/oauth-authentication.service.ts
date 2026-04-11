@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { OAuthService } from 'angular-oauth2-oidc';
+import { OAuthEvent, OAuthService } from 'angular-oauth2-oidc';
 import { jwtDecode } from 'jwt-decode';
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { ConfigService } from '../services/config.service';
 
 export interface DecodedToken {
@@ -13,9 +14,12 @@ export interface DecodedToken {
   providedIn: 'root'
 })
 export class OAuthAuthenticationService {
+  private static readonly TOKEN_REFRESH_BUFFER_MS = 30_000;
   private readonly router: Router = inject(Router);
   private readonly oauthService: OAuthService = inject(OAuthService);
   private readonly config: ConfigService = inject(ConfigService);
+  private tokenRefreshSubscription?: Subscription;
+  private refreshInFlight: Promise<void> | null = null;
   private readonly unauthorizedToken: DecodedToken = {
     roles: ['UNAUTHORIZED'],
     sub: 'UNAUTHORIZED'
@@ -27,7 +31,7 @@ export class OAuthAuthenticationService {
 
   constructor() {
     this.applyAuthConfig();
-    this.oauthService.setupAutomaticSilentRefresh();
+    this.configureAutomaticTokenRenewal();
   }
 
   public initializeAuth(): Promise<void> {
@@ -181,6 +185,15 @@ export class OAuthAuthenticationService {
     return this.oauthService.getAccessToken();
   }
 
+  async getAuthorizationToken(): Promise<string> {
+    if (this.isDevAuthBypassEnabled) {
+      return 'dummy-access-token';
+    }
+
+    await this.ensureFreshAccessToken();
+    return this.oauthService.getAccessToken();
+  }
+
   getDecodedToken(): DecodedToken {
     if (this.isDevAuthBypassEnabled) {
       return {
@@ -217,6 +230,96 @@ export class OAuthAuthenticationService {
     if (authConfig.postLogoutRedirectUri) {
       this.oauthService.postLogoutRedirectUri = authConfig.postLogoutRedirectUri;
     }
+  }
+
+  private configureAutomaticTokenRenewal(): void {
+    this.tokenRefreshSubscription?.unsubscribe();
+
+    if (this.config.authConfig.responseType !== 'code') {
+      this.oauthService.setupAutomaticSilentRefresh();
+      return;
+    }
+
+    this.tokenRefreshSubscription = this.oauthService.events.subscribe((event) => {
+      if (!this.isAccessTokenExpiryEvent(event)) {
+        return;
+      }
+
+      void this.refreshAccessToken();
+    });
+  }
+
+  private isAccessTokenExpiryEvent(event: OAuthEvent): boolean {
+    return event.type === 'token_expires'
+      && (event as OAuthEvent & { info?: unknown }).info === 'access_token';
+  }
+
+  private refreshAccessToken(): Promise<void> {
+    if (this.isDevAuthBypassEnabled) {
+      return Promise.resolve();
+    }
+
+    if (this.refreshInFlight) {
+      return this.refreshInFlight;
+    }
+
+    if (!this.oauthService.getRefreshToken()) {
+      return Promise.resolve();
+    }
+
+    this.refreshInFlight = this.ensureDiscoveryDocumentLoaded()
+      .then(() => this.oauthService.refreshToken())
+      .then(() => undefined)
+      .catch(() => {
+        this.router.navigate(['/login']);
+      })
+      .finally(() => {
+        this.refreshInFlight = null;
+      });
+
+    return this.refreshInFlight;
+  }
+
+  private ensureDiscoveryDocumentLoaded(): Promise<void> {
+    const oauthService = this.oauthService as OAuthService & {
+      loadDiscoveryDocument?: () => Promise<unknown>;
+      tokenEndpoint?: string | null;
+    };
+
+    if (oauthService.tokenEndpoint) {
+      return Promise.resolve();
+    }
+
+    return oauthService.loadDiscoveryDocument?.()
+      .then(() => undefined) ?? Promise.resolve();
+  }
+
+  private ensureFreshAccessToken(): Promise<void> {
+    if (this.isDevAuthBypassEnabled || !this.shouldRefreshAccessToken()) {
+      return Promise.resolve();
+    }
+
+    return this.refreshAccessToken();
+  }
+
+  private shouldRefreshAccessToken(): boolean {
+    if (!this.oauthService.getRefreshToken()) {
+      return false;
+    }
+
+    if (!this.oauthService.hasValidAccessToken()) {
+      return true;
+    }
+
+    const expiration = (this.oauthService as OAuthService & {
+      getAccessTokenExpiration?: () => number;
+    }).getAccessTokenExpiration?.();
+
+    if (!expiration) {
+      return false;
+    }
+
+    return expiration - Date.now() <= OAuthAuthenticationService.TOKEN_REFRESH_BUFFER_MS;
   }
 
   private redirectToHostedLogout(logoutUrl: string): void {

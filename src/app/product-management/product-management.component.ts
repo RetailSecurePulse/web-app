@@ -1,4 +1,4 @@
-import {Component, OnInit, TemplateRef, ViewChild} from '@angular/core';
+import {ChangeDetectorRef, Component, OnInit, TemplateRef, ViewChild} from '@angular/core';
 import {FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
 import {MatDialog, MatDialogActions, MatDialogClose, MatDialogContent, MatDialogTitle} from '@angular/material/dialog';
 import {
@@ -87,7 +87,8 @@ export class ProductManagementComponent implements OnInit {
     private productService: ProductService,
     private fb: FormBuilder,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private cdr: ChangeDetectorRef
   ) {
     this.productForm = this.fb.group({
       id: [''],
@@ -113,9 +114,14 @@ export class ProductManagementComponent implements OnInit {
     this.errorMessage = null;
     this.productService.getProducts().subscribe({
       next: (data: Product[]) => {
-        this.products = data;
-        this.filteredProducts = this.products;
-        this.isLoading = false;
+        // Defer the first table population so Angular doesn't see the
+        // datasource change during the same initial check cycle.
+        queueMicrotask(() => {
+          this.products = data;
+          this.filteredProducts = this.products;
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        });
       },
       error: (error) => {
         this.handleError('Failed to load products', error);

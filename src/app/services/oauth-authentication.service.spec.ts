@@ -2,6 +2,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { OAuthService } from 'angular-oauth2-oidc';
+import { Subject } from 'rxjs';
 
 import { OAuthAuthenticationService } from './oauth-authentication.service';
 import { ConfigService } from '../services/config.service';
@@ -11,8 +12,10 @@ describe('OAuthAuthenticationService', () => {
   let mockOAuthService: jasmine.SpyObj<OAuthService>;
   let mockRouter: jasmine.SpyObj<Router>;
   let configSpy: jasmine.SpyObj<ConfigService>;
+  let oauthEvents: Subject<{ type: string; info?: string }>;
 
   beforeEach(() => {
+    oauthEvents = new Subject();
     mockOAuthService = jasmine.createSpyObj('OAuthService', [
       'configure',
       'setupAutomaticSilentRefresh',
@@ -20,16 +23,27 @@ describe('OAuthAuthenticationService', () => {
       'loadDiscoveryDocumentAndTryLogin',
       'hasValidAccessToken',
       'getAccessToken',
+      'getAccessTokenExpiration',
+      'getRefreshToken',
+      'refreshToken',
       'createLoginUrl',
       'initCodeFlow',
       'logOut',
     ]);
+    Object.defineProperty(mockOAuthService, 'events', {
+      value: oauthEvents.asObservable(),
+      configurable: true
+    });
     mockOAuthService.loadDiscoveryDocument.and.returnValue(Promise.resolve({} as any));
+    mockOAuthService.getAccessTokenExpiration.and.returnValue(Date.now() + 60_000);
+    mockOAuthService.getRefreshToken.and.returnValue('refresh-token');
+    mockOAuthService.refreshToken.and.returnValue(Promise.resolve({} as any));
     (mockOAuthService as any).createLoginUrl.and.returnValue(Promise.resolve('http://localhost:30081/auth/oauth2/authorize'));
     (mockOAuthService as any).config = {
       openUri: jasmine.createSpy('openUri')
     };
     (mockOAuthService as any).loginUrl = 'http://localhost:30081/auth/oauth2/authorize';
+    (mockOAuthService as any).tokenEndpoint = 'http://localhost:30081/auth/oauth2/token';
 
     mockRouter = jasmine.createSpyObj('Router', ['navigate']);
 
@@ -37,6 +51,7 @@ describe('OAuthAuthenticationService', () => {
     configSpy = jasmine.createSpyObj('ConfigService', [], {
       authConfig: {
         dummy: true,
+        responseType: 'code',
         redirectUri: 'http://localhost:30080/auth/callback',
         postLogoutRedirectUri: 'http://localhost:30080'
       }, // shape not important for test
@@ -59,6 +74,54 @@ describe('OAuthAuthenticationService', () => {
     });
 
     service = TestBed.inject(OAuthAuthenticationService);
+  });
+
+  it('should use explicit refresh-token renewal for code flow instead of library silent refresh', async () => {
+    oauthEvents.next({ type: 'token_expires', info: 'access_token' });
+    await Promise.resolve();
+
+    expect(mockOAuthService.refreshToken).toHaveBeenCalled();
+    expect(mockOAuthService.setupAutomaticSilentRefresh).not.toHaveBeenCalled();
+  });
+
+  it('should not try a refresh when no refresh token is available', async () => {
+    mockOAuthService.getRefreshToken.and.returnValue('');
+
+    oauthEvents.next({ type: 'token_expires', info: 'access_token' });
+    await Promise.resolve();
+
+    expect(mockOAuthService.refreshToken).not.toHaveBeenCalled();
+  });
+
+  it('should proactively refresh before returning an authorization token when access token is near expiry', async () => {
+    mockOAuthService.hasValidAccessToken.and.returnValue(true);
+    mockOAuthService.getAccessTokenExpiration.and.returnValue(Date.now() + 5_000);
+    mockOAuthService.getAccessToken.and.returnValue('fresh-token');
+
+    await expectAsync(service.getAuthorizationToken()).toBeResolvedTo('fresh-token');
+
+    expect(mockOAuthService.refreshToken).toHaveBeenCalled();
+  });
+
+  it('should load the discovery document before refreshing when tokenEndpoint is missing', async () => {
+    mockOAuthService.hasValidAccessToken.and.returnValue(true);
+    mockOAuthService.getAccessTokenExpiration.and.returnValue(Date.now() + 5_000);
+    (mockOAuthService as any).tokenEndpoint = undefined;
+
+    await service.getAuthorizationToken();
+
+    expect(mockOAuthService.loadDiscoveryDocument).toHaveBeenCalled();
+    expect(mockOAuthService.refreshToken).toHaveBeenCalled();
+  });
+
+  it('should not proactively refresh when access token still has enough time left', async () => {
+    mockOAuthService.hasValidAccessToken.and.returnValue(true);
+    mockOAuthService.getAccessTokenExpiration.and.returnValue(Date.now() + 120_000);
+    mockOAuthService.getAccessToken.and.returnValue('current-token');
+
+    await expectAsync(service.getAuthorizationToken()).toBeResolvedTo('current-token');
+
+    expect(mockOAuthService.refreshToken).not.toHaveBeenCalled();
   });
 
   describe('initializeAuth', () => {

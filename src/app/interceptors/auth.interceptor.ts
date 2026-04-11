@@ -1,5 +1,7 @@
 import {inject} from '@angular/core';
 import {HttpInterceptorFn} from '@angular/common/http';
+import { from } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 import { AuthFacade } from '../services/auth.facade';
 import { ConfigService } from '../services/config.service';
 
@@ -13,7 +15,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   const authService = inject(AuthFacade);
   const configService = inject(ConfigService);
-  const token = authService.getAccessToken();
   const protectedOrigins = Object.values(configService.apiConfig)
     .filter((value): value is string => typeof value === 'string' && value.length > 0)
     .map(value => value.replace(/\/+$/, ''));
@@ -28,13 +29,17 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
-  if (token) {
-    req = req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`
+  return from(authService.getAuthorizationToken()).pipe(
+    switchMap((token) => {
+      if (token) {
+        req = req.clone({
+          setHeaders: {
+            Authorization: `Bearer ${token}`
+          }
+        });
       }
-    });
-  }
 
-  return next(req);
+      return next(req);
+    })
+  );
 };

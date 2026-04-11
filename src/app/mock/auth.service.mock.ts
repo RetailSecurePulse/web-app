@@ -11,6 +11,7 @@ export const createMockAuthService = (): jasmine.SpyObj<AuthFacade> => {
     'getUserRole',
     'getUsername',
     'getAccessToken',
+    'getAuthorizationToken',
     'getDecodedToken',
   ]);
 
@@ -20,6 +21,7 @@ export const createMockAuthService = (): jasmine.SpyObj<AuthFacade> => {
   mockAuthService.getUserRole.and.returnValue(['ADMIN']);
   mockAuthService.getUsername.and.returnValue('superadmin');
   mockAuthService.getAccessToken.and.returnValue('dummy-access-token');
+  mockAuthService.getAuthorizationToken.and.returnValue(Promise.resolve('dummy-access-token'));
   mockAuthService.getDecodedToken.and.returnValue({
           roles: ['ADMIN'],
           sub: 'superadmin',

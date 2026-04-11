@@ -17,6 +17,7 @@ describe('AuthFacade', () => {
       'logout',
       'getUserRole',
       'getUsername',
+      'getAuthorizationToken',
       'getDecodedToken'
     ], {
       isAuthenticated: true,
@@ -82,6 +83,12 @@ describe('AuthFacade', () => {
     const decoded: DecodedToken = { roles: ['ADMIN'], sub: 'testuser' };
     mockOAuth.getDecodedToken.and.returnValue(decoded);
     expect(service.getDecodedToken()).toEqual(decoded);
+  });
+
+  it('should return an authorization token from oauth service', async () => {
+    mockOAuth.getAuthorizationToken.and.returnValue(Promise.resolve('fresh-token'));
+
+    await expectAsync(service.getAuthorizationToken()).toBeResolvedTo('fresh-token');
   });
 
   describe('navigateToAuthenticatedUser', () => {

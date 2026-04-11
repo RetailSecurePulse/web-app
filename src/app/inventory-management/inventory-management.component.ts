@@ -4,7 +4,7 @@ import { ProductService } from '../product-management/product.service';
 import { InventoryModalComponent } from '../inventory-modal/inventory-modal.component';
 import { BusinessEntity } from '../business-entity-management/business-entity.model';
 
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, ViewChild } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import {
   MatCell,
@@ -104,7 +104,8 @@ export class InventoryManagementComponent implements OnInit {
     private businessEntityService: BusinessEntityService,
     private inventoryService: InventoryService,
     private productService: ProductService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private cdr: ChangeDetectorRef
   ) {}
   private fuseTransactionOptions = {
     keys: ['productSku', 'source', 'destination'],
@@ -144,6 +145,14 @@ export class InventoryManagementComponent implements OnInit {
     this.loadInventoryTransaction();
   }
 
+  private finishLoading(update?: () => void): void {
+    queueMicrotask(() => {
+      update?.();
+      this.isLoading = false;
+      this.cdr.detectChanges();
+    });
+  }
+
   private refreshData(): void {
     this.loadInventoryTransaction();
     if (this.selectedFilter) {
@@ -179,14 +188,19 @@ export class InventoryManagementComponent implements OnInit {
   fetchBusinessEntities(): void {
     this.businessEntityService.getBusinessEntities().subscribe({
       next: (businessEntities) => {
-        this.businessOptions = businessEntities;
-        businessEntities.forEach((entity) => {
-          this.shopMap[entity.id] = entity.name;
+        // Defer the first options update so Angular doesn't see the array
+        // change during the same initial check cycle.
+        queueMicrotask(() => {
+          this.businessOptions = businessEntities;
+          businessEntities.forEach((entity) => {
+            this.shopMap[entity.id] = entity.name;
+          });
+          this.cdr.detectChanges();
         });
       },
       error: (error) => {
         console.error('Error fetching business entities:', error);
-        this.isLoading = false;
+        this.finishLoading();
       },
     });
   }
@@ -196,8 +210,9 @@ export class InventoryManagementComponent implements OnInit {
     this.inventoryService.getInventoryByBusinessEntity(filterValue).subscribe({
       next: (inventoryData) => {
         if (!inventoryData || inventoryData.length === 0) {
-          this.tableData.data = [];
-          this.isLoading = false;
+          this.finishLoading(() => {
+            this.tableData.data = [];
+          });
           return;
         }
 
@@ -217,21 +232,23 @@ export class InventoryManagementComponent implements OnInit {
 
         forkJoin(requests).subscribe({
           next: results => {
-            this.tableData= new MatTableDataSource(results);
-            this.tableData.paginator = this.paginator;
-            this.tableData.sort = this.sort;
-            this.isLoading = false;
+            this.finishLoading(() => {
+              this.tableData= new MatTableDataSource(results);
+              this.tableData.paginator = this.paginator;
+              this.tableData.sort = this.sort;
+            });
           },
           error: error => {
             console.error('Error processing inventory data:', error);
-            this.isLoading = false;
+            this.finishLoading();
           }
         });
       },
       error: (error) => {
         console.error('Error fetching filtered inventory:', error);
-        this.errorMessage = 'Failed to load inventory data';
-        this.isLoading = false;
+        this.finishLoading(() => {
+          this.errorMessage = 'Failed to load inventory data';
+        });
       },
     });
   }
@@ -241,8 +258,9 @@ export class InventoryManagementComponent implements OnInit {
     this.inventoryService.getInventoryTransaction().pipe(
       switchMap((data: any[]) => {
         if (!data || data.length === 0) {
-          this.errorMessage = 'No inventory transactions found.';
-          this.isLoading = false;          
+          this.finishLoading(() => {
+            this.errorMessage = 'No inventory transactions found.';
+          });
           return [];
         }
 
@@ -269,22 +287,25 @@ export class InventoryManagementComponent implements OnInit {
     ).subscribe({
       next: (result) => {
         if (result === null || result.length === 0) {
-          this.errorMessage = 'No inventory transactions found.';
-          this.inventoryTransactions.data = [];
-          this.isLoading = false;
+          this.finishLoading(() => {
+            this.errorMessage = 'No inventory transactions found.';
+            this.inventoryTransactions.data = [];
+          });
           return;
         }
 
-        this.inventoryTransactions.data = result;
-        this.inventoryTransactions.sort = this.sort; // Set sort here as well
-        this.errorMessage = '';
-        this.isLoading = false;
+        this.finishLoading(() => {
+          this.inventoryTransactions.data = result;
+          this.inventoryTransactions.sort = this.sort; // Set sort here as well
+          this.errorMessage = '';
+        });
       },
       error: (error) => {
         console.error('Error fetching inventory transactions:', error);
-        this.inventoryTransactions.data = [];
-        this.errorMessage = 'Failed to load transactions';
-        this.isLoading = false;
+        this.finishLoading(() => {
+          this.inventoryTransactions.data = [];
+          this.errorMessage = 'Failed to load transactions';
+        });
       },
     });
   }
