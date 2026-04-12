@@ -43,7 +43,7 @@ export class ConfigService {
       authConfig: this.normalizeAuthConfig({ ...authConfig, ...(runtime?.authConfig || {}) }),
       apiConfig: { ...apiConfig, ...(runtime?.apiConfig || {}) },
       environment: {
-        production: env.production,
+        production: runtimeEnvironment?.production ?? env.production,
         authEnabled: runtimeEnvironment?.authEnabled ?? env.authEnabled,
         devModeUser: runtimeEnvironment?.devModeUser ?? env.devModeUser,
         devModeRole: runtimeEnvironment?.devModeRole ?? env.devModeRole,
