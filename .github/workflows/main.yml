@@ -23,10 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the repository
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      uses: actions/checkout@v4
 
     - name: Set up Node.js for Angular 19
-      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
+      uses: actions/setup-node@v3
       with:
         node-version: ${{ env.NODE_VERSION }} 
 
@@ -37,7 +37,7 @@ jobs:
       run: npm run test:ci
 
     - name: Upload Code Coverage Report
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      uses: actions/upload-artifact@v4
       with:
         name: code-coverage-report
         path: coverage/
@@ -52,13 +52,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the repository
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
     # Analyze Frontend (Angular Project)
     - name: Set up Node.js
-      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
+      uses: actions/setup-node@v3
       with:
         node-version: ${{ env.NODE_VERSION }}
 
@@ -68,8 +68,8 @@ jobs:
     - name: Test RP Web App
       run: npm run test:ci
 
-    - name: Analyze Frontend with SonarQube # SonarQube Scanner Action @v7 SHA
-      uses: SonarSource/sonarqube-scan-action@299e4b793aaa83bf2aba7c9c14bedbb485688ec4
+    - name: Analyze Frontend with SonarQube
+      uses: SonarSource/sonarqube-scan-action@v5
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
@@ -77,14 +77,12 @@ jobs:
     name: Web App Snyk SCA Scan
     needs: [web-app-unit-tests]
     runs-on: ubuntu-latest
-    env:
-      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js # actions/setup-node@v6.3.0 SHA
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -94,16 +92,11 @@ jobs:
       - name: Install Snyk CLI
         run: npm install -g snyk
 
-      - name: Authenticate with Snyk (diagnostic)
+      - name: Authenticate with Snyk
         run: snyk auth ${{ secrets.SNYK_TOKEN }}
-        continue-on-error: true
-
-      - name: Verify Snyk authentication
-        run: snyk whoami
-        continue-on-error: true
 
       - name: Run Snyk test (non-blocking)
-        run: snyk test --all-projects --org=retailsecurepulse --severity-threshold=low || true
+        run: snyk test --all-projects --org=retailpulse --severity-threshold=low || true
 
       - name: Monitor project in Snyk dashboard
-        run: snyk monitor --all-projects --org=retailsecurepulse
+        run: snyk monitor --all-projects --org=retailpulse
