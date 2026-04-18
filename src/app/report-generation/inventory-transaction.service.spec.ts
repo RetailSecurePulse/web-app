@@ -15,6 +15,7 @@ describe('InventoryTransactionService', () => {
   let service: InventoryTransactionService;
   let httpSpy: jasmine.SpyObj<HttpClient>;
   let configSpy: jasmine.SpyObj<ConfigService>;
+  let consoleErrorSpy: jasmine.Spy<(message?: any, ...optionalParams: any[]) => void>;
 
   const baseOrigin = 'http://localhost/'; // what we stub into ConfigService
   const baseUrl = `${baseOrigin}api/reports/inventory-transactions`;
@@ -56,6 +57,7 @@ describe('InventoryTransactionService', () => {
     configSpy = jasmine.createSpyObj('ConfigService', [], {
       apiConfig: { report_api_url: baseOrigin },
     });
+    consoleErrorSpy = spyOn(console, 'error');
 
     TestBed.configureTestingModule({
       providers: [
@@ -107,6 +109,7 @@ describe('InventoryTransactionService', () => {
         },
         error: (err) => {
           expect(err.message).toBe('Failed to fetch inventory transactions.');
+          expect(consoleErrorSpy).toHaveBeenCalledWith('Fetch Error:', jasmine.any(Error));
           done();
         },
       });
@@ -230,6 +233,7 @@ describe('InventoryTransactionService', () => {
         error: (err) => {
           // Note: exportReport has its own friendly error message
           expect(err.message).toBe('Failed to export inventory transactions.');
+          expect(consoleErrorSpy).toHaveBeenCalledWith('Export Report Error:', jasmine.any(Error));
           done();
         },
       });

@@ -31,7 +31,7 @@ describe('ConfigService', () => {
       authConfig: {} as any,
       apiConfig: {} as any,
       environment: {
-        production: true,
+        production: false,
         authEnabled: false,
         devModeUser: 'localdev',
         devModeRole: 'operator',
@@ -71,6 +71,8 @@ describe('ConfigService', () => {
     (environment as { useRuntimeConfig: boolean }).useRuntimeConfig = true;
     (globalThis as RuntimeConfigHost).runtimeConfig = {
       authConfig: {
+        issuer: 'https://retailpulse.me:8081/auth',
+        requireHttps: true,
         showDebugInformation: true
       } as any,
       apiConfig: {

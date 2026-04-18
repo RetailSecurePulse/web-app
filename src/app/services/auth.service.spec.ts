@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import { OAuthService } from 'angular-oauth2-oidc';
+import { EMPTY } from 'rxjs';
 import { AuthFacade } from './auth.facade';
 
 describe('AuthService', () => {
@@ -8,16 +9,27 @@ describe('AuthService', () => {
 
   beforeEach(() => {
 
-    let mockOAuthService = jasmine.createSpyObj('OAuthService', [
-      'configure',
-      'setupAutomaticSilentRefresh',
-      'loadDiscoveryDocumentAndLogin',
-      'logOut',
-      'hasValidAccessToken',
-      'getAccessToken',
-      'getIdentityClaims',
-      'getAccessTokenExpiration'
-    ]);
+    const mockOAuthService = jasmine.createSpyObj(
+      'OAuthService',
+      [
+        'configure',
+        'setupAutomaticSilentRefresh',
+        'loadDiscoveryDocumentAndLogin',
+        'loadDiscoveryDocumentAndTryLogin',
+        'loadDiscoveryDocument',
+        'logOut',
+        'hasValidAccessToken',
+        'getAccessToken',
+        'getIdentityClaims',
+        'getAccessTokenExpiration',
+        'getRefreshToken',
+        'refreshToken',
+        'initCodeFlow',
+      ],
+      {
+        events: EMPTY,
+      }
+    );
 
     TestBed.configureTestingModule({
       providers: [
