@@ -96,7 +96,7 @@ jobs:
         run: snyk auth ${{ secrets.SNYK_TOKEN }}
 
       - name: Run Snyk test (non-blocking)
-        run: snyk test --all-projects --org=retailpulse --severity-threshold=low || true
+        run: snyk test --all-projects --org=retailsecurepulse --severity-threshold=low || true
 
       - name: Monitor project in Snyk dashboard
-        run: snyk monitor --all-projects --org=retailpulse
+        run: snyk monitor --all-projects --org=retailsecurepulse
