@@ -78,8 +78,7 @@ jobs:
     name: Web App Snyk SCA Scan
     needs: [web-app-unit-tests]
     runs-on: ubuntu-latest
-    env:
-      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+   
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
