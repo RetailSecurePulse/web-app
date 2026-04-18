@@ -27,13 +27,21 @@ FROM nginx:alpine
 # Update packages and prepare the unprivileged runtime user in a single layer
 RUN apk update && \
     apk upgrade pcre2 && \
+    apk add --no-cache openssl && \
     rm -rf /var/cache/apk/* && \
     addgroup -g 1001 -S nginx-group && \
     adduser -u 1001 -S nginx-user -G nginx-group && \
-    mkdir -p /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx && \
+    mkdir -p /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx /etc/nginx/ssl && \
     chown -R nginx-user:nginx-group /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx && \
     chmod -R 755 /usr/share/nginx/html && \
-    rm -rf /usr/share/nginx/html/*
+    rm -rf /usr/share/nginx/html/* && \
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout /etc/nginx/ssl/tls.key \
+        -out /etc/nginx/ssl/tls.crt \
+        -subj "/CN=localhost/O=RetailPulse-Dev-Fallback" && \
+    chown -R nginx-user:nginx-group /etc/nginx/ssl && \
+    chmod 640 /etc/nginx/ssl/tls.key && \
+    chmod 644 /etc/nginx/ssl/tls.crt
 
 # Copy built Angular app
 COPY --from=builder /app/dist/browser /usr/share/nginx/html
@@ -46,6 +54,6 @@ COPY ./nginx.conf /etc/nginx/nginx.conf
 
 USER nginx-user
 
-EXPOSE 8080
+EXPOSE 8080 8443
 
 CMD ["nginx", "-g", "daemon off;"]
