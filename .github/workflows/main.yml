@@ -95,7 +95,7 @@ jobs:
         run: npm install -g snyk
 
       - name: Authenticate with Snyk (diagnostic)
-        run: snyk auth "$SNYK_TOKEN" --auth-type=token
+        run: snyk auth ${{ secrets.SNYK_TOKEN }}
         continue-on-error: true
 
       - name: Verify Snyk authentication
