@@ -94,6 +94,14 @@ jobs:
       - name: Install Snyk CLI
         run: npm install -g snyk
 
+      - name: Authenticate with Snyk (diagnostic)
+        run: snyk auth "$SNYK_TOKEN" --auth-type=token
+        continue-on-error: true
+
+      - name: Verify Snyk authentication
+        run: snyk whoami
+        continue-on-error: true
+
       - name: Run Snyk test (non-blocking)
         run: snyk test --all-projects --org=retailsecurepulse --severity-threshold=low || true
 
