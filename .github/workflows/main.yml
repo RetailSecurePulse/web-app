@@ -1,15 +1,18 @@
 name: RetailPulse Frontend Web App CI Pipeline
 env:
   NODE_VERSION: '22'          # Centralized Node.js version. Use the latest LTS version compatible with Angular 19
+  SNYK_ORG_ID: '9dc256d2-423f-46da-9411-77dd1ae6e544'
 
 on:
   workflow_dispatch:
   push:
     branches: 
+      - "develop"
       - "main"
 
   pull_request:
     branches: 
+     - "develop"
      - "main"
     types:
       - opened
@@ -77,6 +80,8 @@ jobs:
     name: Web App Snyk SCA Scan
     needs: [web-app-unit-tests]
     runs-on: ubuntu-latest
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
@@ -92,11 +97,18 @@ jobs:
       - name: Install Snyk CLI
         run: npm install -g snyk
 
-      - name: Authenticate with Snyk
-        run: snyk auth ${{ secrets.SNYK_TOKEN }}
+      - name: Validate Snyk token is configured
+        run: |
+          if [ -z "${SNYK_TOKEN}" ]; then
+            echo "SNYK_TOKEN secret is not configured for this repository."
+            exit 1
+          fi
+
+      - name: Verify Snyk authentication
+        run: snyk whoami
 
       - name: Run Snyk test (non-blocking)
-        run: snyk test --all-projects --org=retailsecurepulse --severity-threshold=low || true
+        run: snyk test --all-projects --org="${{ env.SNYK_ORG_ID }}" --severity-threshold=low || true
 
       - name: Monitor project in Snyk dashboard
-        run: snyk monitor --all-projects --org=retailsecurepulse
+        run: snyk monitor --all-projects --org="${{ env.SNYK_ORG_ID }}"
