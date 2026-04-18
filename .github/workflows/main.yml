@@ -77,6 +77,8 @@ jobs:
     name: Web App Snyk SCA Scan
     needs: [web-app-unit-tests]
     runs-on: ubuntu-latest
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
     steps:
       - name: Checkout the repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -91,9 +93,6 @@ jobs:
 
       - name: Install Snyk CLI
         run: npm install -g snyk
-
-      - name: Authenticate with Snyk
-        run: snyk auth ${{ secrets.SNYK_TOKEN }}
 
       - name: Run Snyk test (non-blocking)
         run: snyk test --all-projects --org=retailsecurepulse --severity-threshold=low || true
