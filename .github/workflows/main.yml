@@ -72,8 +72,7 @@ jobs:
 
     - name: Analyze Frontend with SonarQube
       uses: SonarSource/sonarqube-scan-action@v5
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+ 
 
   web-app-snyk-scan:
     name: Web App Snyk SCA Scan
