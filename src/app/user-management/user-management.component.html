@@ -213,6 +213,7 @@
     </div>
   </form>
   <ng-template pTemplate="footer">      
+    <button pButton type="button" label="Resend Password" icon="pi pi-envelope" (click)="confirmResendPasswordEmail()" class="p-button-info resend-password-button ml-2" [disabled]="!canResendPasswordEmail()"></button>
     <button pButton type="button" label="Cancel" icon="pi pi-times" (click)="editDialog_visible.set(false)" class="p-button-secondary ml-2"></button>
     <button pButton type="button" label="Save" icon="pi pi-check" (click)="confirmEditUser()" class="p-button-success" [disabled]="editUserForm.invalid"></button>
   </ng-template>

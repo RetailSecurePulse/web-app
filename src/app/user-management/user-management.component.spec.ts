@@ -20,13 +20,13 @@ describe('UserManagementComponent', () => {
 
   const mockAuth = createMockAuthService();
   const mockUsers: User[] = [
-    { id: 1, username: 'user1', password: '', email: 'user1@email.com', name: 'User One', roles: ['ADMIN'], isEnabled: true },
-    { id: 2, username: 'user2', password: '', email: 'user2@email.com', name: 'User Two', roles: ['CASHIER'], isEnabled: false }
+    { id: 1, username: 'user1', password: '', email: 'user1@email.com', name: 'User One', roles: ['ADMIN'], isEnabled: true, temporaryPassword: true },
+    { id: 2, username: 'user2', password: '', email: 'user2@email.com', name: 'User Two', roles: ['CASHIER'], isEnabled: false, temporaryPassword: false }
   ];
 
   beforeEach(async () => {
     userServiceSpy = jasmine.createSpyObj('UserService', [
-      'getUsers', 'createUser', 'editUser', 'deleteUser'
+      'getUsers', 'getUserById', 'createUser', 'editUser', 'deleteUser', 'resendPasswordEmail'
     ]);
     confirmSpy = jasmine.createSpyObj('ConfirmationService', ['confirm']);
     (confirmSpy as any).onClose = of({});
@@ -49,6 +49,10 @@ describe('UserManagementComponent', () => {
     }).compileComponents();
 
     userServiceSpy.getUsers.and.returnValue(of(mockUsers));
+    userServiceSpy.getUserById.and.callFake((userId: number) => {
+      const foundUser = mockUsers.find(user => user.id === userId);
+      return foundUser ? of(foundUser) : throwError(() => 'notFound');
+    });
     fixture = TestBed.createComponent(UserManagementComponent);
     component = fixture.componentInstance;
   });
@@ -162,14 +166,36 @@ describe('UserManagementComponent', () => {
     it('sets error_msg if register user is rejected', () => {
       (confirmSpy.confirm as jasmine.Spy).and.callFake(opts => opts.reject());
       component.confirmRegisterUser();
-      expect(component.error_msg()).toContain('Deletion canceled');
+      expect(component.error_msg()).toContain('Registration canceled');
     });
 
     it('shows edit dialog and populates form', () => {
       component.showEditUserForm(mockUsers[0]);
+      expect(userServiceSpy.getUserById).toHaveBeenCalledWith(1);
       expect(component.selectedUser()).toEqual(mockUsers[0]);
       expect(component.editDialog_visible()).toBeTrue();
       expect(component.editUserForm.value.ctlUsername).toBe('user1');
+    });
+
+    it('refreshes user before opening edit dialog', () => {
+      const staleUser = { ...mockUsers[0], temporaryPassword: true };
+      const freshUser = { ...mockUsers[0], temporaryPassword: false };
+      userServiceSpy.getUserById.and.returnValue(of(freshUser));
+
+      component.showEditUserForm(staleUser);
+
+      expect(component.selectedUser()).toEqual(freshUser);
+      expect(component.canResendPasswordEmail()).toBeFalse();
+      expect(component.users()[0].temporaryPassword).toBeFalse();
+    });
+
+    it('does not open edit dialog if refresh fails', () => {
+      userServiceSpy.getUserById.and.returnValue(throwError(() => 'loadErr'));
+
+      component.showEditUserForm(mockUsers[0]);
+
+      expect(component.editDialog_visible()).toBeFalse();
+      expect(component.error_msg()).toBe('loadErr');
     });
 
     it('edits user on confirm', fakeAsync(() => {
@@ -200,6 +226,41 @@ describe('UserManagementComponent', () => {
       (confirmSpy.confirm as jasmine.Spy).and.callFake(opts => opts.reject());
       component.confirmEditUser();
       expect(component.error_msg()).toContain('Edit canceled');
+    });
+
+    it('resends password email on confirm', fakeAsync(() => {
+      userServiceSpy.resendPasswordEmail.and.returnValue(of(undefined));
+      component.showEditUserForm(mockUsers[0]);
+      (confirmSpy.confirm as jasmine.Spy).and.callFake(opts => opts.accept());
+      component.confirmResendPasswordEmail();
+      tick();
+      expect(userServiceSpy.resendPasswordEmail).toHaveBeenCalledWith(1);
+      expect(component.editDialog_visible()).toBeFalse();
+      expect(component.success_msg()).toContain('new password');
+    }));
+
+    it('does not resend password email when password has already changed', () => {
+      component.showEditUserForm(mockUsers[1]);
+      component.confirmResendPasswordEmail();
+      expect(userServiceSpy.resendPasswordEmail).not.toHaveBeenCalled();
+      expect(confirmSpy.confirm).not.toHaveBeenCalled();
+      expect(component.editDialog_error_msg()).toContain('already been changed');
+    });
+
+    it('handles resend password email error', fakeAsync(() => {
+      userServiceSpy.resendPasswordEmail.and.returnValue(throwError(() => 'mailErr'));
+      component.showEditUserForm(mockUsers[0]);
+      (confirmSpy.confirm as jasmine.Spy).and.callFake(opts => opts.accept());
+      component.confirmResendPasswordEmail();
+      tick();
+      expect(component.editDialog_error_msg()).toBe('mailErr');
+    }));
+
+    it('sets error_msg if resend password email is rejected', () => {
+      component.showEditUserForm(mockUsers[0]);
+      (confirmSpy.confirm as jasmine.Spy).and.callFake(opts => opts.reject());
+      component.confirmResendPasswordEmail();
+      expect(component.error_msg()).toContain('Password email canceled');
     });
 
     it('deletes user on confirm', fakeAsync(() => {

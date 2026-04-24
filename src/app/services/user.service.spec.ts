@@ -17,7 +17,8 @@ describe('UserService', () => {
     email: 'test@email.com',
     name: 'Test User',
     roles: ['ADMIN'],
-    isEnabled: true
+    isEnabled: true,
+    temporaryPassword: true
   };
 
   beforeEach(() => {
@@ -84,6 +85,28 @@ describe('UserService', () => {
     });
   });
 
+  describe('getUserById', () => {
+    it('should GET user by id', () => {
+      service.getUserById(mockUser.id).subscribe(user => {
+        expect(user).toEqual(mockUser);
+      });
+      const req = httpMock.expectOne(`${apiUrl}/id/${mockUser.id}`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockUser);
+    });
+
+    it('should handle error', () => {
+      service.getUserById(mockUser.id).subscribe({
+        next: () => fail('should error'),
+        error: (err) => {
+          expect(err.message).toBe('notfound');
+        }
+      });
+      const req = httpMock.expectOne(`${apiUrl}/id/${mockUser.id}`);
+      req.flush({ message: 'notfound' }, { status: 404, statusText: 'Not Found' });
+    });
+  });
+
   describe('createUser', () => {
     it('should POST new user', () => {
       service.createUser(mockUser).subscribe(user => {
@@ -96,7 +119,7 @@ describe('UserService', () => {
       expect(body.email).toBe(mockUser.email);
       expect(body.name).toBe(mockUser.name);
       expect(body.roles).toEqual(mockUser.roles);
-      expect(body.password).toMatch(/^[A-Za-z0-9]{20}$/);
+      expect(Object.prototype.hasOwnProperty.call(body, 'password')).toBeFalse();
       req.flush(mockUser);
     });
 
@@ -159,6 +182,28 @@ describe('UserService', () => {
       });
       const req = httpMock.expectOne(`${apiUrl}/${mockUser.id}`);
       req.flush({ message: 'deletefail' }, { status: 500, statusText: 'Server Error' });
+    });
+  });
+
+  describe('resendPasswordEmail', () => {
+    it('should PATCH resend password email', () => {
+      service.resendPasswordEmail(mockUser.id).subscribe(res => {
+        expect(res).toBeUndefined();
+      });
+      const req = httpMock.expectOne(`${apiUrl}/${mockUser.id}/resend-password`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toBeNull();
+    });
+
+    it('should handle error', () => {
+      service.resendPasswordEmail(mockUser.id).subscribe({
+        next: () => fail('should error'),
+        error: (err) => {
+          expect(err.message).toBe('mailfail');
+        }
+      });
+      const req = httpMock.expectOne(`${apiUrl}/${mockUser.id}/resend-password`);
+      req.flush({ message: 'mailfail' }, { status: 400, statusText: 'Bad Request' });
     });
   });
 

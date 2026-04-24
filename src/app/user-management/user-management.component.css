@@ -82,6 +82,16 @@
   text-align: center; /* Centers the text inside the button */ 
 }
 
+:host ::ng-deep .resend-password-button.p-button {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+:host ::ng-deep .resend-password-button.p-button:not(:disabled):hover {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
 /* Custom styles for the p-dialog */
 .p-dialog .p-dialog-header {
   background-color: #f8d7da;

@@ -22,7 +22,7 @@ export class UserService {
   getUsers(): Observable<User[]> {
     return this.http.get<User[]>(this.apiUrl).pipe(
       catchError((err) => {
-        throw new Error(err.error.message);
+        throw new Error(this.extractErrorMessage(err));
       })
     );
   }
@@ -32,7 +32,15 @@ export class UserService {
 
     return this.http.get<User>(urlGetUser).pipe(
       catchError((err) => {
-        throw new Error(err.error.message);
+        throw new Error(this.extractErrorMessage(err));
+      })
+    );
+  }
+
+  getUserById(userId: number): Observable<User> {
+    return this.http.get<User>(`${this.apiUrl}/id/${userId}`).pipe(
+      catchError((err) => {
+        throw new Error(this.extractErrorMessage(err));
       })
     );
   }
@@ -40,7 +48,6 @@ export class UserService {
   createUser(newUser: User): Observable<User> {
     const create_user_dto: CreateUserDTO = {
       username: newUser.username,
-      password: this.createTemporaryPassword(),
       email: newUser.email,
       name: newUser.name,
       roles: newUser.roles
@@ -48,7 +55,7 @@ export class UserService {
 
     return this.http.post<User>(this.apiUrl, create_user_dto).pipe(
       catchError((err) => {
-        throw new Error(err.error.message);
+        throw new Error(this.extractErrorMessage(err));
       })
     );
   }
@@ -63,7 +70,7 @@ export class UserService {
 
     return this.http.put<User>(`${this.apiUrl}/${currUser.id}`, update_user_dto).pipe(
       catchError((err) => {
-        throw new Error(err.error.message);
+        throw new Error(this.extractErrorMessage(err));
       })
     );
   }
@@ -71,7 +78,17 @@ export class UserService {
   deleteUser(userId: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${userId}`).pipe(
       catchError((err) => {
-        throw new Error(err.error.message);
+        throw new Error(this.extractErrorMessage(err));
+      })
+    );
+  }
+
+  resendPasswordEmail(userId: number): Observable<void> {
+    return this.http.patch<void>(`${this.apiUrl}/${userId}/resend-password`, null, {
+      responseType: 'text' as 'json'
+    }).pipe(
+      catchError((err) => {
+        throw new Error(this.extractErrorMessage(err));
       })
     );
   }
@@ -88,42 +105,27 @@ export class UserService {
       responseType: 'text' as 'json'
     }).pipe(
       catchError((err) => {
-        throw new Error(err.error.message);
+        throw new Error(this.extractErrorMessage(err));
       })
     );
   }
 
-  private createTemporaryPassword(length: number = 20): string {
-    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-    const lower = 'abcdefghijkmnopqrstuvwxyz';
-    const digits = '23456789';
-    const all = upper + lower + digits;
+  private extractErrorMessage(err: any): string {
+    const errorBody = err?.error;
 
-    const passwordChars = [
-      this.randomChar(upper),
-      this.randomChar(lower),
-      this.randomChar(digits)
-    ];
-
-    while (passwordChars.length < length) {
-      passwordChars.push(this.randomChar(all));
+    if (errorBody?.message) {
+      return errorBody.message;
     }
 
-    for (let i = passwordChars.length - 1; i > 0; i--) {
-      const j = this.randomInt(i + 1);
-      [passwordChars[i], passwordChars[j]] = [passwordChars[j], passwordChars[i]];
+    if (typeof errorBody === 'string') {
+      try {
+        const parsedBody = JSON.parse(errorBody);
+        return parsedBody?.message ?? errorBody;
+      } catch {
+        return errorBody;
+      }
     }
 
-    return passwordChars.join('');
-  }
-
-  private randomChar(charset: string): string {
-    return charset[this.randomInt(charset.length)];
-  }
-
-  private randomInt(maxExclusive: number): number {
-    const bytes = new Uint32Array(1);
-    crypto.getRandomValues(bytes);
-    return bytes[0] % maxExclusive;
+    return err?.message ?? '';
   }
 }
