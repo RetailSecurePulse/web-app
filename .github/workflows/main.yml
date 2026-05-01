@@ -5,15 +5,15 @@ env:
 on:
   workflow_dispatch:
   push:
-    branches: 
+    branches:
       - "main"
-  # pull_request:
-  #   branches: 
-  #     - "main"
-  #   types: 
-  #     - opened
-  #     - synchronize
-  #     - reopened
+  pull_request:
+    branches:
+      - "main"
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 jobs:
   web-app-unit-tests:
@@ -21,12 +21,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
     - name: Set up Node.js for Angular 19
       uses: actions/setup-node@v3
       with:
-        node-version: ${{ env.NODE_VERSION }} 
+        node-version: ${{ env.NODE_VERSION }}
 
     - name: Install Dependencies for RP Web App
       run: npm ci
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       with:
         fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
@@ -62,7 +62,7 @@ jobs:
 
     - name: Install Dependencies for RP Web App
       run: npm ci
-    
+
     - name: Test RP Web App
       run: npm run test:ci
 
@@ -77,7 +77,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -94,7 +94,7 @@ jobs:
         run: snyk auth ${{ secrets.SNYK_TOKEN }}
 
       - name: Run Snyk test (non-blocking)
-        run: snyk test --all-projects --org=retailpulse --severity-threshold=low || true
+        run: snyk test --all-projects --org=retailsecurepulse --severity-threshold=low || true
 
       - name: Monitor project in Snyk dashboard
-        run: snyk monitor --all-projects --org=retailpulse
+        run: snyk monitor --all-projects --org=retailsecurepulse
