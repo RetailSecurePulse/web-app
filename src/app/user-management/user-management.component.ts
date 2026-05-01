@@ -149,13 +149,11 @@ export class UserManagementComponent {
       header: 'Confirm Registration',
       icon: 'pi pi-exclamation-triangle',
       accept: () => {
-        // User confirmed, proceed with deletion
         this.registerNewUser();
       },
       reject: () => {
-        // User rejected, do nothing
-        this.error_msg.set('Deletion canceled.');
-        console.log('Deletion canceled.');
+        this.error_msg.set('Registration canceled.');
+        console.log('Registration canceled.');
       }
     });
   }
@@ -178,7 +176,8 @@ export class UserManagementComponent {
       email: this.newUserForm.value.ctlEmail,
       name: this.newUserForm.value.ctlName,
       roles: [this.newUserForm.value.ctlRole],
-      isEnabled: true
+      isEnabled: true,
+      temporaryPassword: true
     };
     
     console.log('Saving new user:', newUser);    
@@ -252,12 +251,29 @@ export class UserManagementComponent {
       return;
     }
 
-    this.selectedUser.set(user);
     this.resetMessages();
+    this.userService.getUserById(user.id).subscribe({
+      next: (freshUser: User) => {
+        this.users.update((currentUsers) =>
+          currentUsers.map((currentUser) =>
+            currentUser.id === freshUser.id ? freshUser : currentUser
+          )
+        );
+        this.filteredUsers.set([...this.users()]);
+        this.openEditDialog(freshUser);
+      },
+      error: (err) => {
+        this.error_msg.set(err);
+        console.error(err);
+      },
+    });
+  }
+
+  private openEditDialog(user: User): void {
+    this.selectedUser.set(user);
     this.editUserForm.reset();
     this.editDialog_visible.set(true);
 
-    // Populate the form with the user's data
     this.editUserForm.patchValue({
       ctlUsername: user.username,
       ctlName: user.name,
@@ -302,7 +318,8 @@ export class UserManagementComponent {
       email: this.editUserForm.value.ctlEmail,
       name: this.editUserForm.value.ctlName,
       roles: [this.editUserForm.value.ctlRole],
-      isEnabled: this.editUserForm.value.ctlStatus === 'true'
+      isEnabled: this.editUserForm.value.ctlStatus === 'true',
+      temporaryPassword: this.selectedUser()?.temporaryPassword
     };
 
     this.userService.editUser(editedUser).subscribe({
@@ -322,5 +339,63 @@ export class UserManagementComponent {
         console.error(err);
       },
     });
+  }
+
+  confirmResendPasswordEmail(): void {
+    const selectedUser = this.selectedUser();
+
+    if (selectedUser === null) {
+      this.error_msg.set('User not found');
+      return;
+    }
+
+    if (!this.canResendPasswordEmail()) {
+      this.editDialog_error_msg.set('Password has already been changed. Password email cannot be resent.');
+      return;
+    }
+
+    this.resetMessages();
+    this.confirmationService.confirm({
+      message: 'Generate a new password and email it to user: <strong>' + selectedUser.username + '</strong>?',
+      header: 'Confirm Password Email',
+      icon: 'pi pi-exclamation-triangle',
+      accept: () => {
+        this.resendPasswordEmail();
+      },
+      reject: () => {
+        this.error_msg.set('Password email canceled.');
+        console.log('Password email canceled.');
+      }
+    });
+  }
+
+  resendPasswordEmail(): void {
+    const selectedUser = this.selectedUser();
+
+    if (selectedUser === null) {
+      this.error_msg.set('User not found');
+      return;
+    }
+
+    if (!this.canResendPasswordEmail()) {
+      this.editDialog_error_msg.set('Password has already been changed. Password email cannot be resent.');
+      return;
+    }
+
+    this.resetMessages();
+    this.userService.resendPasswordEmail(selectedUser.id).subscribe({
+      next: () => {
+        this.editDialog_visible.set(false);
+        this.success_msg.set('A new password was emailed to ' + selectedUser.username);
+      },
+      error: (err) => {
+        this.editDialog_error_msg.set(err);
+        console.error(err);
+      },
+    });
+  }
+
+  canResendPasswordEmail(): boolean {
+    return this.selectedUser()?.temporaryPassword === true;
   }
 }

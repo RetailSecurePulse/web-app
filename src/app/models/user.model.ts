@@ -6,11 +6,11 @@ export interface User {
   name: string;          // Full name of the user
   roles: string[];          // Role of the user (e.g., ADMIN, CASHER, OPERATOR etc.)
   isEnabled: boolean;      // Status of the user. User may be disabled by the admin or too many entry of wrong password
+  temporaryPassword?: boolean; // True until the user changes the generated password
 }
 
 export interface CreateUserDTO {
   username: string;
-  password: string;
   email: string;
   name: string;
   roles: string[];

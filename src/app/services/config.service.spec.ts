@@ -8,14 +8,17 @@ type RuntimeConfigHost = typeof globalThis & {
 describe('ConfigService', () => {
   let originalRuntimeConfig: RuntimeConfigHost['runtimeConfig'];
   let originalUseRuntimeConfig: boolean;
+  let originalProduction: boolean;
 
   beforeEach(() => {
     originalRuntimeConfig = (globalThis as RuntimeConfigHost).runtimeConfig;
     originalUseRuntimeConfig = environment.useRuntimeConfig;
+    originalProduction = environment.production;
   });
 
   afterEach(() => {
     (environment as { useRuntimeConfig: boolean }).useRuntimeConfig = originalUseRuntimeConfig;
+    (environment as { production: boolean }).production = originalProduction;
 
     if (originalRuntimeConfig === undefined) {
       delete (globalThis as RuntimeConfigHost).runtimeConfig;
@@ -31,7 +34,7 @@ describe('ConfigService', () => {
       authConfig: {} as any,
       apiConfig: {} as any,
       environment: {
-        production: true,
+        production: false,
         authEnabled: false,
         devModeUser: 'localdev',
         devModeRole: 'operator',
@@ -41,7 +44,7 @@ describe('ConfigService', () => {
 
     const service = new ConfigService();
 
-    expect(service.environment.production).toBe(environment.production);
+    expect(service.environment.production).toBeFalse();
     expect(service.environment.authEnabled).toBeFalse();
     expect(service.environment.devModeUser).toBe('localdev');
     expect(service.environment.devModeRole).toBe('operator');
@@ -71,6 +74,8 @@ describe('ConfigService', () => {
     (environment as { useRuntimeConfig: boolean }).useRuntimeConfig = true;
     (globalThis as RuntimeConfigHost).runtimeConfig = {
       authConfig: {
+        issuer: 'https://retailpulse.me/auth',
+        requireHttps: true,
         showDebugInformation: true
       } as any,
       apiConfig: {
@@ -84,16 +89,11 @@ describe('ConfigService', () => {
       environment: undefined as any
     };
 
-    const originalProduction = environment.production;
     (environment as { production: boolean }).production = true;
 
-    try {
-      expect(() => new ConfigService()).toThrowError(
-        'Insecure production configuration: OAuth debug logging must be disabled.'
-      );
-    } finally {
-      (environment as { production: boolean }).production = originalProduction;
-    }
+    expect(() => new ConfigService()).toThrowError(
+      'Insecure production configuration: OAuth debug logging must be disabled.'
+    );
   });
 
   it('should normalize runtime redirectUri placeholders to the current origin callback route', () => {
