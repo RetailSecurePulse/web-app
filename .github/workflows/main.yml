@@ -1,6 +1,7 @@
 name: RetailPulse Frontend Web App CI Pipeline
 env:
   NODE_VERSION: '22'          # Centralized Node.js version. Use the latest LTS version compatible with Angular 19
+  SNYK_ORG: retailsecurepulse
 
 on:
   workflow_dispatch:
@@ -90,11 +91,31 @@ jobs:
       - name: Install Snyk CLI
         run: npm install -g snyk
 
-      - name: Authenticate with Snyk
-        run: snyk auth ${{ secrets.SNYK_TOKEN }}
+      - name: Verify Snyk token
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          if [ -z "${SNYK_TOKEN:-}" ]; then
+            echo "::error::SNYK_TOKEN secret is not configured for this repository."
+            exit 1
+          fi
+
+          http_code="$(curl -sS -o /tmp/snyk-self.json -w '%{http_code}' \
+            -H "Authorization: token ${SNYK_TOKEN}" \
+            -H 'Content-Type: application/vnd.api+json' \
+            'https://api.snyk.io/rest/self?version=2024-06-10')"
+
+          if [ "${http_code}" != "200" ]; then
+            echo "::error::SNYK_TOKEN was rejected by Snyk API with HTTP ${http_code}. Rotate or update the GitHub secret."
+            exit 1
+          fi
 
       - name: Run Snyk test (non-blocking)
-        run: snyk test --all-projects --org=retailsecurepulse --severity-threshold=low || true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk test --all-projects --org="${SNYK_ORG}" --severity-threshold=low || true
 
       - name: Monitor project in Snyk dashboard
-        run: snyk monitor --all-projects --org=retailsecurepulse
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk monitor --all-projects --org="${SNYK_ORG}"
