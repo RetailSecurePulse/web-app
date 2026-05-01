@@ -15,11 +15,19 @@ spec:
       labels:
         app: deploy-rp-web
     spec:
+      automountServiceAccountToken: false
       containers:
       - image: casperyap/rp-web-app:v2.1.0 #docker.io/casperyap/
         name: rp-web-app
         imagePullPolicy: Always
-        resources: {}
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+            storage: 1Gi
+          limits:
+            cpu: 250m
+            memory: 256Mi
 
 ---
 apiVersion: v1
