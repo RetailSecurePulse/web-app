@@ -25,8 +25,14 @@ interface RuntimeConfig {
   environment: EnvironmentConfig;
 }
 
+interface RuntimeConfigOverrides {
+  authConfig?: Partial<AuthConfig>;
+  apiConfig?: Partial<ApiConfig>;
+  environment?: Partial<EnvironmentConfig>;
+}
+
 type RuntimeConfigHost = typeof globalThis & {
-  runtimeConfig?: RuntimeConfig;
+  runtimeConfig?: RuntimeConfigOverrides;
 };
 
 @Injectable({
@@ -42,13 +48,7 @@ export class ConfigService {
     this.config = {
       authConfig: this.normalizeAuthConfig({ ...authConfig, ...(runtime?.authConfig || {}) }),
       apiConfig: { ...apiConfig, ...(runtime?.apiConfig || {}) },
-      environment: {
-        production: runtimeEnvironment?.production ?? env.production,
-        authEnabled: runtimeEnvironment?.authEnabled ?? env.authEnabled,
-        devModeUser: runtimeEnvironment?.devModeUser ?? env.devModeUser,
-        devModeRole: runtimeEnvironment?.devModeRole ?? env.devModeRole,
-        stripePublicKey: runtimeEnvironment?.stripePublicKey ?? env.stripePublicKey
-      }
+      environment: this.resolveEnvironmentConfig(runtimeEnvironment)
     };
 
     this.assertSecureProductionConfig();
@@ -66,7 +66,7 @@ export class ConfigService {
     return this.config.environment;
   }
 
-  private resolveRuntimeConfig(): RuntimeConfig | undefined {
+  private resolveRuntimeConfig(): RuntimeConfigOverrides | undefined {
     // Local dev builds should keep their static environment values. This avoids
     // an accidental global runtimeConfig object silently overriding local auth
     // and API endpoints during ng serve or unit tests.
@@ -75,6 +75,18 @@ export class ConfigService {
     }
 
     return (globalThis as RuntimeConfigHost).runtimeConfig;
+  }
+
+  private resolveEnvironmentConfig(runtimeEnvironment?: Partial<EnvironmentConfig>): EnvironmentConfig {
+    const {
+      production,
+      authEnabled,
+      devModeUser,
+      devModeRole,
+      stripePublicKey
+    } = { ...env, ...runtimeEnvironment };
+
+    return { production, authEnabled, devModeUser, devModeRole, stripePublicKey };
   }
 
   private normalizeAuthConfig(config: AuthConfig): AuthConfig {
