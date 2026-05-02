@@ -3,7 +3,7 @@ import { OAuthEvent, OAuthService } from 'angular-oauth2-oidc';
 import { jwtDecode } from 'jwt-decode';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { ConfigService } from '../services/config.service';
+import { ConfigService } from './config.service';
 
 export interface DecodedToken {
   roles: Array<string>;
@@ -185,12 +185,12 @@ export class OAuthAuthenticationService {
     return this.oauthService.getAccessToken();
   }
 
-  async getAuthorizationToken(): Promise<string> {
+  async getAuthorizationToken(forceRefresh = false): Promise<string> {
     if (this.isDevAuthBypassEnabled) {
       return 'dummy-access-token';
     }
 
-    await this.ensureFreshAccessToken();
+    await this.ensureFreshAccessToken(forceRefresh);
     return this.oauthService.getAccessToken();
   }
 
@@ -245,7 +245,7 @@ export class OAuthAuthenticationService {
         return;
       }
 
-      void this.refreshAccessToken();
+      void this.refreshAccessToken().catch(() => undefined);
     });
   }
 
@@ -264,14 +264,16 @@ export class OAuthAuthenticationService {
     }
 
     if (!this.oauthService.getRefreshToken()) {
-      return Promise.resolve();
+      this.router.navigate(['/login']);
+      return Promise.reject(new Error('No refresh token is available.'));
     }
 
     this.refreshInFlight = this.ensureDiscoveryDocumentLoaded()
       .then(() => this.oauthService.refreshToken())
       .then(() => undefined)
-      .catch(() => {
+      .catch((error) => {
         this.router.navigate(['/login']);
+        throw error;
       })
       .finally(() => {
         this.refreshInFlight = null;
@@ -294,8 +296,8 @@ export class OAuthAuthenticationService {
       .then(() => undefined) ?? Promise.resolve();
   }
 
-  private ensureFreshAccessToken(): Promise<void> {
-    if (this.isDevAuthBypassEnabled || !this.shouldRefreshAccessToken()) {
+  private ensureFreshAccessToken(forceRefresh = false): Promise<void> {
+    if (this.isDevAuthBypassEnabled || (!forceRefresh && !this.shouldRefreshAccessToken())) {
       return Promise.resolve();
     }
 
