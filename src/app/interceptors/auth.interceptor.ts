@@ -1,9 +1,21 @@
 import {inject} from '@angular/core';
-import {HttpInterceptorFn} from '@angular/common/http';
-import { from } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
+import {HttpErrorResponse, HttpInterceptorFn, HttpRequest} from '@angular/common/http';
+import { from, throwError } from 'rxjs';
+import { catchError, switchMap } from 'rxjs/operators';
 import { AuthFacade } from '../services/auth.facade';
 import { ConfigService } from '../services/config.service';
+
+const withBearerToken = (request: HttpRequest<unknown>, token: string): HttpRequest<unknown> => {
+  if (!token) {
+    return request;
+  }
+
+  return request.clone({
+    setHeaders: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+};
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const excludedPaths = [
@@ -30,16 +42,16 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   return from(authService.getAuthorizationToken()).pipe(
-    switchMap((token) => {
-      if (token) {
-        req = req.clone({
-          setHeaders: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+    switchMap((token) => next(withBearerToken(req, token))),
+    catchError((error) => {
+      if (!(error instanceof HttpErrorResponse) || error.status !== 401) {
+        return throwError(() => error);
       }
 
-      return next(req);
+      return from(authService.getAuthorizationToken(true)).pipe(
+        switchMap((token) => next(withBearerToken(req, token))),
+        catchError((refreshError) => throwError(() => refreshError))
+      );
     })
   );
 };

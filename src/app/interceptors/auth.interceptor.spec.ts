@@ -136,4 +136,26 @@ describe('authInterceptor', () => {
     expect(req.request.headers.get('Authorization')).toBe('Bearer fresh-token');
     req.flush({});
   }));
+
+  it('should force refresh and retry once when a protected request returns 401', fakeAsync(() => {
+    mockAuthFacade.getAuthorizationToken.and.returnValues(
+      Promise.resolve('expired-token'),
+      Promise.resolve('fresh-token')
+    );
+
+    httpClient.get('http://localhost:30084/api/inventoryTransaction')
+      .subscribe(res => expect(res).toEqual({ ok: true }));
+    flushMicrotasks();
+
+    const firstReq = httpTestingController.expectOne('http://localhost:30084/api/inventoryTransaction');
+    expect(firstReq.request.headers.get('Authorization')).toBe('Bearer expired-token');
+    firstReq.flush({ exp: 'token expired' }, { status: 401, statusText: 'Unauthorized' });
+    flushMicrotasks();
+
+    const retryReq = httpTestingController.expectOne('http://localhost:30084/api/inventoryTransaction');
+    expect(retryReq.request.headers.get('Authorization')).toBe('Bearer fresh-token');
+    retryReq.flush({ ok: true });
+
+    expect(mockAuthFacade.getAuthorizationToken.calls.argsFor(1)).toEqual([true]);
+  }));
 });

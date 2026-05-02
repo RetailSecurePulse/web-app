@@ -100,7 +100,6 @@ export class UserManagementComponent {
   }
 
   filterUsers(event: Event): void {
-    console.log('Filtering users');
     this.resetMessages();
     
     if (!event.target) {
@@ -153,7 +152,6 @@ export class UserManagementComponent {
       },
       reject: () => {
         this.error_msg.set('Registration canceled.');
-        console.log('Registration canceled.');
       }
     });
   }
@@ -180,10 +178,8 @@ export class UserManagementComponent {
       temporaryPassword: true
     };
     
-    console.log('Saving new user:', newUser);    
     this.userService.createUser(newUser).subscribe({
       next: (createdUser: User) => {
-        console.log('User created:', createdUser);
         this.users.set([...this.users(), createdUser]);
         this.filteredUsers.set([...this.users()]);        
         this.newDialog_visible.set(false);
@@ -215,7 +211,6 @@ export class UserManagementComponent {
       reject: () => {
         // User rejected, do nothing
         this.error_msg.set('Deletion canceled.');
-        console.log('Deletion canceled.');
       }
     });
   }
@@ -226,10 +221,8 @@ export class UserManagementComponent {
       return;
     }
     this.resetMessages();
-    console.log(`Deleting user ${deletedUser.name}`);
     this.userService.deleteUser(deletedUser.id).subscribe({
       next: () => {
-        console.log('User deleted:', deletedUser.username);
         this.users.update((currentUsers) =>
           currentUsers.filter((user) => user.id !== deletedUser.id)
         );
@@ -296,7 +289,6 @@ export class UserManagementComponent {
       reject: () => {
         // User rejected, do nothing
         this.error_msg.set('Edit canceled.');
-        console.log('Edit canceled.');
       }
     });
   }
@@ -309,7 +301,6 @@ export class UserManagementComponent {
     }
 
     this.resetMessages();
-    console.log('Editing user');
 
     const editedUser: User = {
       id: this.selectedUser()?.id || 0,
@@ -324,7 +315,6 @@ export class UserManagementComponent {
 
     this.userService.editUser(editedUser).subscribe({
       next: (updatedUser: User) => {
-        console.log('User edited:', updatedUser);
         this.users.update((currentUsers) =>
           currentUsers.map((user) =>
             user.id === updatedUser.id ? updatedUser : user
@@ -364,7 +354,6 @@ export class UserManagementComponent {
       },
       reject: () => {
         this.error_msg.set('Password email canceled.');
-        console.log('Password email canceled.');
       }
     });
   }

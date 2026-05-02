@@ -124,6 +124,25 @@ describe('OAuthAuthenticationService', () => {
     expect(mockOAuthService.refreshToken).not.toHaveBeenCalled();
   });
 
+  it('should force refresh before returning an authorization token when requested', async () => {
+    mockOAuthService.hasValidAccessToken.and.returnValue(true);
+    mockOAuthService.getAccessTokenExpiration.and.returnValue(Date.now() + 120_000);
+    mockOAuthService.getAccessToken.and.returnValue('fresh-token');
+
+    await expectAsync(service.getAuthorizationToken(true)).toBeResolvedTo('fresh-token');
+
+    expect(mockOAuthService.refreshToken).toHaveBeenCalled();
+  });
+
+  it('should reject and navigate to login when refresh token renewal fails', async () => {
+    mockOAuthService.hasValidAccessToken.and.returnValue(false);
+    mockOAuthService.refreshToken.and.returnValue(Promise.reject(new Error('refresh failed')));
+
+    await expectAsync(service.getAuthorizationToken()).toBeRejected();
+
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/login']);
+  });
+
   describe('initializeAuth', () => {
     it('should resolve immediately if auth is disabled in non-production', async () => {
       configSpy.environment.production = false;
